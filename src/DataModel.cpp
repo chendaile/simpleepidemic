@@ -24,8 +24,7 @@ int SIRModel::getPopulation() const { return population; }
 void SIRModel::setBeta(double b) { beta = b; }
 void SIRModel::setGamma(double g) { gamma = g; }
 
-// Core simulation logic - to be implemented in a later step
-void SIRModel::step() {
+void SIRModel::run_single_step() {
     // Placeholder: In the future, this will calculate the next day's S, I, R values
     if (population == 0) return;
 
@@ -52,14 +51,22 @@ void SIRModel::step() {
     history.push_back(currentData);
 }
 
-void SIRModel::reset(int initialPopulation, int initialInfected) {
+void SIRModel::run(int days) {
+    // The reset function already clears history and adds day 0.
+    // This loop will add day 1 through `days`.
+    for (int d = 0; d < days; ++d) {
+        run_single_step();
+    }
+}
+
+void SIRModel::reset(int initialPopulation, int initialInfected, int initialRecovered) {
     population = initialPopulation;
     history.clear();
 
     currentData.day = 0;
     currentData.infected = static_cast<double>(initialInfected);
-    currentData.recovered = 0;
-    currentData.susceptible = static_cast<double>(population - initialInfected);
+    currentData.recovered = static_cast<double>(initialRecovered);
+    currentData.susceptible = static_cast<double>(population - initialInfected - initialRecovered);
     
     history.push_back(currentData);
 }
@@ -91,7 +98,7 @@ void EpidemicData::addRegion(const char* name, int population, int confirmed, in
     newRegion.deaths = deaths;
 
     // Also initialize its simulation model
-    newRegion.simulation.reset(population, confirmed - recovered - deaths);
+    newRegion.simulation.reset(population, confirmed - recovered - deaths, recovered + deaths);
 }
 
 void EpidemicData::deleteRegion(int index) {

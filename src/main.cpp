@@ -70,6 +70,15 @@ void ShowDashboardPage() {
     
     ImGui::Separator();
     ImGui::Text("各地区确诊数条形图");
+    static bool fit_axes = true;
+    if (ImGui::Button("重置视图##Overview")) {
+        fit_axes = true;
+    }
+    ImGui::SameLine();
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("如果图表范围不合适，请点击“重置视图”按钮来自动缩放。");
+    }
 
     // Bar Chart
     if (!regions.empty()) {
@@ -87,14 +96,18 @@ void ShowDashboardPage() {
             active_data.push_back(static_cast<double>(regions[i].confirmedCases - regions[i].recoveredCases - regions[i].deaths));
         }
         
+        if (fit_axes) {
+            ImPlot::SetNextAxisToFit(ImAxis_Y1);
+            fit_axes = false;
+        }
         if (ImPlot::BeginPlot("##BarChart", ImVec2(-1, -1))) {
             ImPlot::SetupAxes("地区", "人数", ImPlotAxisFlags_None, ImPlotAxisFlags_None);
             ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), names.size(), names.data());
             ImPlot::SetupAxisLimits(ImAxis_X1, -0.5, regions.size() - 0.5);
 
-            ImPlot::PlotBars("累计确诊", positions.data(), confirmed_data.data(), names.size(), 0.2, -0.22);
-            ImPlot::PlotBars("累计治愈", positions.data(), recovered_data.data(), names.size(), 0.2, 0);
-            ImPlot::PlotBars("现存活跃", positions.data(), active_data.data(), names.size(), 0.2, 0.22);
+            ImPlot::PlotBars("累计确诊", confirmed_data.data(), names.size(), 0.2, -0.22);
+            ImPlot::PlotBars("累计治愈", recovered_data.data(), names.size(), 0.2, 0);
+            ImPlot::PlotBars("现存活跃", active_data.data(), names.size(), 0.2, 0.22);
             
             ImPlot::EndPlot();
         }
@@ -303,7 +316,42 @@ struct PlotData {
 void ShowPredictionPage() {
     ImGui::Text(">> 传染病动力学预测 (SIR Model)");
     ImGui::Separator();
+
+    if (ImGui::CollapsingHeader("关于SIR模型说明", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::TextWrapped("来源: 这是一个数学预测模型,用来模拟和预测疫情未来的可能发展趋势。它不是基于个案统计,而是将人群分为几个大的群体来估算。");
+        ImGui::BulletText("易感者 (Susceptible, S): 指的是理论上有可能被感染的健康人群。在模型开始时,这个数值通常是总人口减去已经感染和康复的人。");
+        ImGui::BulletText("感染者 (Infected, I): 模型中代表当前时刻具有传染性的人群。");
+        ImGui::BulletText("移出者 (Removed, R): 模型中代表已经康复并获得免疫(或因病去世)的人群。");
+        ImGui::Dummy(ImVec2(0.0f, 5.0f));
+        ImGui::TextUnformatted("--- 模型如何初始化 ---");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 1.0f, 1.0f));
+        ImGui::TextWrapped("当您选择一个城市或调整参数时，模型将使用所选城市的当前数据作为第0天的初始状态:");
+        ImGui::BulletText("I (感染者) = 当前活跃病例 (累计确诊 - 累计治愈 - 累计死亡)");
+        ImGui::BulletText("R (移出者) = 累计治愈 + 累计死亡");
+        ImGui::BulletText("S (易感者) = 总人口 - I - R");
+        ImGui::PopStyleColor();
+        ImGui::Dummy(ImVec2(0.0f, 5.0f));
+        ImGui::TextWrapped("作用: 用于预测未来的感染高峰、疫情规模等。");
+        ImGui::Separator();
+        ImGui::TextUnformatted(u8"核心数学公式:");
+        ImGui::BulletText(u8"dS/dt = - (β * S * I) / N");
+        ImGui::BulletText(u8"dI/dt = (β * S * I) / N - γ * I");
+        ImGui::BulletText(u8"dR/dt = γ * I");
+        ImGui::Dummy(ImVec2(0.0f, 5.0f)); 
+        ImGui::TextUnformatted(u8"其中:");
+        ImGui::BulletText(u8"S: 易感者 (Susceptible)");
+        ImGui::BulletText(u8"I: 感染者 (Infected)");
+        ImGui::BulletText(u8"R: 移出者 (Removed)");
+        ImGui::BulletText(u8"N: 总人口 (S+I+R)");
+        ImGui::BulletText(u8"β (Beta): 传染率, 即一个感染者在单位时间内有效接触并传染给易感者的平均人数");
+        ImGui::BulletText(u8"γ (Gamma): 恢复率, 即一个感染者在单位时间内恢复(或死亡)的比例");
+
+        ImGui::Separator();
+    }
+
     static int selected_region_idx = 0;
+    static bool auto_fit_plot = true; // Control axis fitting
     auto& regions = g_EpidemicData.getRegions();
     ImGui::Columns(2, "PredCols", false); ImGui::SetColumnWidth(0, 320);
 
@@ -312,25 +360,62 @@ void ShowPredictionPage() {
         ImGui::BeginChild("Controls");
         ImGui::Text("模型参数设置"); ImGui::Dummy(ImVec2(0, 10));
         const char* current_name = (selected_region_idx < regions.size()) ? regions[selected_region_idx].name : "无";
+        
+        static bool first_run = true;
+        bool should_run_sim = false;
+
         if (ImGui::BeginCombo("选择城市", current_name)) {
             for (int i = 0; i < regions.size(); ++i) {
-                if (ImGui::Selectable(regions[i].name, selected_region_idx == i)) { selected_region_idx = i; }
+                if (ImGui::Selectable(regions[i].name, selected_region_idx == i)) { 
+                    if (selected_region_idx != i) {
+                        selected_region_idx = i;
+                        should_run_sim = true; 
+                        auto_fit_plot = true; // City changed, so fit the plot
+                    }
+                }
                 if (selected_region_idx == i) { ImGui::SetItemDefaultFocus(); }
             }
             ImGui::EndCombo();
         }
-        static double beta = 0.3, gamma = 0.1; static int days = 90;
-        ImGui::SliderFloat("传染率 (Beta)", (float*)&beta, 0.0, 2.0, "%.3f");
-        ImGui::SliderFloat("恢复率 (Gamma)", (float*)&gamma, 0.0, 1.0, "%.3f");
-        ImGui::SliderInt("预测天数", &days, 10, 365);
-        if (ImGui::Button("运行预测", ImVec2(300, 40))) {
+
+        static float beta = 0.3f, gamma = 0.1f; static int days = 90;
+        bool params_changed = false;
+        params_changed |= ImGui::SliderFloat("传染率 (Beta)", &beta, 0.0f, 2.0f, "%.3f");
+        params_changed |= ImGui::SliderFloat("恢复率 (Gamma)", &gamma, 0.0f, 1.0f, "%.3f");
+        params_changed |= ImGui::SliderInt("预测天数", &days, 10, 365);
+
+        if (params_changed) {
+            should_run_sim = true;
+            // auto_fit_plot = true; // Parameters changed, so fit the plot. Let user click "Reset View" instead.
+        }
+
+        ImGui::Spacing();
+        bool run_button_clicked = ImGui::Button("手动运行", ImVec2(148, 40));
+        ImGui::SameLine();
+        if (ImGui::Button("重置视图", ImVec2(148, 40))) {
+            auto_fit_plot = true;
+        }
+
+        if (first_run || should_run_sim || run_button_clicked) {
             if (selected_region_idx < regions.size()) {
                 Region& r = regions[selected_region_idx];
-                r.simulation.setBeta(beta); r.simulation.setGamma(gamma);
+                r.simulation.setBeta(beta);
+                r.simulation.setGamma(gamma);
                 int active = r.confirmedCases - r.recoveredCases - r.deaths;
-                r.simulation.reset(r.population, active > 0 ? active : 1);
-                for (int d = 0; d < days; ++d) { r.simulation.step(); }
+                r.simulation.reset(r.population, active > 0 ? active : 1, r.recoveredCases + r.deaths);
+                r.simulation.run(days); // Use the new run method
             }
+            if (first_run) { auto_fit_plot = true; } // Also auto-fit on the very first run
+            first_run = false;
+        }
+
+        // --- Debug Info ---
+        ImGui::Separator();
+        ImGui::Text("Debug Info:");
+        if (selected_region_idx < regions.size()) {
+            Region& r = regions[selected_region_idx];
+            ImGui::Text("Model Beta: %.3f", r.simulation.getBeta());
+            ImGui::Text("Model Gamma: %.3f", r.simulation.getGamma());
         }
         ImGui::EndChild();
     }
@@ -343,12 +428,19 @@ void ShowPredictionPage() {
         if (selected_region_idx < regions.size()) {
             plot_data.FromHistory(regions[selected_region_idx].simulation.getHistory());
         }
+        
+        // Conditionally fit the plot to the data, then give control to the user.
+        if (auto_fit_plot) {
+            ImPlot::SetNextAxesToFit();
+            auto_fit_plot = false; // Consume the flag, handing control to user until next reset.
+        }
+
         if (ImPlot::BeginPlot("SIR Model", ImVec2(-1,-1))) {
             ImPlot::SetupAxes("天 (Days)", "人数 (Population)");
             if (!plot_data.days.empty()) {
                 ImPlot::PlotLine("易感者 (S)", plot_data.days.data(), plot_data.s.data(), plot_data.days.size());
                 ImPlot::PlotLine("感染者 (I)", plot_data.days.data(), plot_data.i.data(), plot_data.days.size());
-                ImPlot::PlotLine("康复者 (R)", plot_data.days.data(), plot_data.r.data(), plot_data.days.size());
+                ImPlot::PlotLine("移出者 (R)", plot_data.days.data(), plot_data.r.data(), plot_data.days.size());
             }
             ImPlot::EndPlot();
         }
@@ -365,7 +457,7 @@ int main(int, char**)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "疫情信息管理与预测系统", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "疫情信息管理与预测系统v0.1.0", NULL, NULL);
     if (window == NULL) return 1;
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);

@@ -31,8 +31,9 @@ public:
     void setGamma(double gamma);
 
     // Simulation control
-    void step();
-    void reset(int initialPopulation, int initialInfected);
+    void run_single_step();
+    void run(int days);
+    void reset(int initialPopulation, int initialInfected, int initialRecovered);
 
 private:
     std::vector<SIRDataPoint> history;
