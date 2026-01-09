@@ -1,32 +1,144 @@
 #include "DataModel.h"
-#include <cstring> // 为了使用 strncpy
+#include "imgui.h" // For ImVec4
+#include <cstring>  // For strncpy
+#include <algorithm> // For std::max
 
-// 1. 【真正定义】全局数据源
-// 内存是在这里分配的
-std::vector<CityRecord> g_Cities;
+// --- SIRModel Class Implementation ---
 
-// 2. 实现构造函数
-CityRecord::CityRecord(const char* n, int c, int r, int p) {
-    // 安全复制字符串到 char 数组
-    strncpy(name, n, sizeof(name) - 1);
-    name[sizeof(name) - 1] = '\0'; // 确保结尾有结束符
-    confirmed = c;
-    recovered = r;
-    population = p;
+SIRModel::SIRModel() : beta(0.2), gamma(0.1), population(0) {
+    history.reserve(200); // Pre-allocate some memory
 }
 
-// 3. 实现风险计算逻辑
-// 规则：确诊 > 1000 高风险，> 100 中风险，否则低风险
-RiskLevel CityRecord::GetRisk() const {
-    if (confirmed > 1000) return Risk_High;
-    if (confirmed > 100)  return Risk_Mid;
-    return Risk_Low;
+const std::vector<SIRDataPoint>& SIRModel::getHistory() const {
+    return history;
 }
 
-// 4. 实现初始化测试数据
-void InitTestData() {
-    g_Cities.clear();
-    g_Cities.emplace_back("Wuhan", 50340, 46464, 11000000);
-    g_Cities.emplace_back("Changsha", 242, 242, 8000000);
-    g_Cities.emplace_back("Shanghai", 340, 300, 24000000);
+const SIRDataPoint& SIRModel::getCurrentData() const {
+    return currentData;
+}
+
+double SIRModel::getBeta() const { return beta; }
+double SIRModel::getGamma() const { return gamma; }
+int SIRModel::getPopulation() const { return population; }
+
+void SIRModel::setBeta(double b) { beta = b; }
+void SIRModel::setGamma(double g) { gamma = g; }
+
+// Core simulation logic - to be implemented in a later step
+void SIRModel::step() {
+    // Placeholder: In the future, this will calculate the next day's S, I, R values
+    if (population == 0) return;
+
+    // This is the core SIR model mathematical formula
+    double S = currentData.susceptible;
+    double I = currentData.infected;
+    double R = currentData.recovered;
+    
+    double newInfections = (beta * S * I) / population;
+    double newRecoveries = gamma * I;
+
+    // Update the numbers, ensuring they don't go below zero
+    S = std::max(0.0, S - newInfections);
+    I = std::max(0.0, I + newInfections - newRecoveries);
+    R = std::max(0.0, R + newRecoveries);
+
+    // Update current data for the next step
+    currentData.day += 1;
+    currentData.susceptible = S;
+    currentData.infected = I;
+    currentData.recovered = R;
+
+    // Store this step in history
+    history.push_back(currentData);
+}
+
+void SIRModel::reset(int initialPopulation, int initialInfected) {
+    population = initialPopulation;
+    history.clear();
+
+    currentData.day = 0;
+    currentData.infected = static_cast<double>(initialInfected);
+    currentData.recovered = 0;
+    currentData.susceptible = static_cast<double>(population - initialInfected);
+    
+    history.push_back(currentData);
+}
+
+
+// --- Region Struct Implementation ---
+
+Region::Region() : population(0), confirmedCases(0), recoveredCases(0), deaths(0) {
+    name[0] = '\0'; // Ensure the name is an empty string by default
+}
+
+
+// --- EpidemicData Class Implementation ---
+
+EpidemicData::EpidemicData() {
+    // The vector is already initialized by its own default constructor
+}
+
+void EpidemicData::addRegion(const char* name, int population, int confirmed, int recovered, int deaths) {
+    regions.emplace_back(); // Create a new default-constructed Region at the end
+    Region& newRegion = regions.back();
+
+    strncpy(newRegion.name, name, sizeof(newRegion.name) - 1);
+    newRegion.name[sizeof(newRegion.name) - 1] = '\0';
+
+    newRegion.population = population;
+    newRegion.confirmedCases = confirmed;
+    newRegion.recoveredCases = recovered;
+    newRegion.deaths = deaths;
+
+    // Also initialize its simulation model
+    newRegion.simulation.reset(population, confirmed - recovered - deaths);
+}
+
+void EpidemicData::deleteRegion(int index) {
+    if (index >= 0 && index < regions.size()) {
+        regions.erase(regions.begin() + index);
+    }
+}
+
+Region* EpidemicData::getRegion(int index) {
+    if (index >= 0 && index < regions.size()) {
+        return &regions[index];
+    }
+    return nullptr;
+}
+
+std::vector<Region>& EpidemicData::getRegions() {
+    return regions;
+}
+
+// --- Static Utility Functions ---
+
+const char* EpidemicData::getRiskLevelString(RiskLevel level) {
+    switch (level) {
+        case RiskLevel::High:   return "高风险 (HIGH)";
+        case RiskLevel::Medium: return "中风险 (MID)";
+        case RiskLevel::Low:
+        default:                return "低风险 (LOW)";
+    }
+}
+
+ImVec4 EpidemicData::getRiskLevelColor(RiskLevel level) {
+    switch (level) {
+        case RiskLevel::High:   return ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // Red
+        case RiskLevel::Medium: return ImVec4(1.0f, 1.0f, 0.0f, 1.0f); // Yellow
+        case RiskLevel::Low:
+        default:                return ImVec4(0.0f, 1.0f, 0.0f, 1.0f); // Green
+    }
+}
+
+RiskLevel EpidemicData::calculateRiskLevel(const Region& region) {
+    int activeCases = region.confirmedCases - region.recoveredCases - region.deaths;
+    // Basic logic: risk is based on active cases per 100k people
+    if (region.population == 0) return RiskLevel::Low;
+    
+    double activePer100k = (static_cast<double>(activeCases) / region.population) * 100000.0;
+
+    if (activePer100k > 50) return RiskLevel::High;
+    if (activePer100k > 10) return RiskLevel::Medium;
+    return RiskLevel::Low;
 }

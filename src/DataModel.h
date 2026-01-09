@@ -1,32 +1,83 @@
 #pragma once
+
 #include <vector>
 #include <string>
 
-// 1. 定义风险等级枚举
-enum RiskLevel {
-    Risk_Low,   // 低风险
-    Risk_Mid,   // 中风险
-    Risk_High   // 高风险
+// Forward-declare ImVec4 from imgui.h to avoid including the full header
+struct ImVec4;
+
+// Struct to hold data for a single day for the SIR model
+struct SIRDataPoint {
+    int day = 0; // Day number
+    double susceptible = 0;
+    double infected = 0;
+    double recovered = 0;
 };
 
-// 2. 定义城市数据结构
-struct CityRecord {
-    char name[64];      // 城市名 (用 char 数组方便绑定 ImGui)
-    int confirmed;      // 确诊人数
-    int recovered;      // 治愈人数
-    int population;     // 总人口
+// Represents the SIR simulation model and its state for a single region
+class SIRModel {
+public:
+    SIRModel();
 
-    // 构造函数声明
-    CityRecord(const char* n = "New City", int c = 0, int r = 0, int p = 100000);
+    // Getters
+    const std::vector<SIRDataPoint>& getHistory() const;
+    const SIRDataPoint& getCurrentData() const;
+    double getBeta() const;
+    double getGamma() const;
+    int getPopulation() const;
 
-    // 成员函数声明：获取当前风险等级
-    RiskLevel GetRisk() const;
+    // Setters
+    void setBeta(double beta);
+    void setGamma(double gamma);
+
+    // Simulation control
+    void step();
+    void reset(int initialPopulation, int initialInfected);
+
+private:
+    std::vector<SIRDataPoint> history;
+    SIRDataPoint currentData;
+    double beta;  // Transmission rate
+    double gamma; // Recovery rate
+    int population;
 };
 
-// 3. 声明全局数据源
-// 这里的 extern 关键字很重要！
-// 它告诉编译器："有个叫 g_Cities 的列表存在于某个 .cpp 文件里，别在这里重复创建它，去那边找。"
-extern std::vector<CityRecord> g_Cities;
+// Enum for risk level classification
+enum class RiskLevel { Low, Medium, High };
 
-// 4. 声明一个初始化测试数据的函数
-void InitTestData();
+// Struct to hold all data for a single region/city
+struct Region {
+    char name[128];
+    int population;
+    
+    // Manually entered data
+    int confirmedCases;
+    int recoveredCases;
+    int deaths;
+
+    // Simulation model for this region
+    SIRModel simulation;
+
+    // Default constructor
+    Region();
+};
+
+// Main class to manage all epidemic data across multiple regions
+class EpidemicData {
+public:
+    EpidemicData();
+
+    // Region management
+    void addRegion(const char* name, int population, int confirmed, int recovered, int deaths);
+    void deleteRegion(int index);
+    Region* getRegion(int index);
+    std::vector<Region>& getRegions();
+
+    // Utility
+    static const char* getRiskLevelString(RiskLevel level);
+    static ImVec4 getRiskLevelColor(RiskLevel level);
+    static RiskLevel calculateRiskLevel(const Region& region);
+
+private:
+    std::vector<Region> regions;
+};

@@ -36,7 +36,7 @@ set(IMGUI_SOURCES
 # 3. 生成可执行文件
 # ============================================================
 # 最终程序 = 你的 main.cpp + ImGui 的一堆 cpp
-add_executable(EpidemicApp src/main.cpp ${IMGUI_SOURCES})
+add_executable(EpidemicApp src/main.cpp src/DataModel.cpp ${IMGUI_SOURCES})
 
 # 告诉编译器去哪里找 ImGui 的头文件 (.h)
 target_include_directories(EpidemicApp PRIVATE
