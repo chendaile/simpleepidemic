@@ -33,7 +33,7 @@ public:
     // Simulation control
     void run_single_step();
     void run(int days);
-    void reset(int initialPopulation, int initialInfected, int initialRecovered);
+    void reset(int initialPopulation, int initialInfected, int initialRecovered, int startDay = 0);
 
 private:
     std::vector<SIRDataPoint> history;
@@ -46,21 +46,36 @@ private:
 // Enum for risk level classification
 enum class RiskLevel { Low, Medium, High };
 
+// Struct to hold historical data for a specific date
+struct HistoricalRecord {
+    int day; // Relative day (0, 1, 2...)
+    int confirmed;
+    int recovered;
+    int deaths;
+};
+
 // Struct to hold all data for a single region/city
 struct Region {
     char name[128];
     int population;
     
-    // Manually entered data
+    // Manually entered data (current state)
     int confirmedCases;
     int recoveredCases;
     int deaths;
+
+    // Historical data for prediction calibration
+    std::vector<HistoricalRecord> history;
 
     // Simulation model for this region
     SIRModel simulation;
 
     // Default constructor
     Region();
+
+    // Calibration methods
+    double calculateAverageBeta() const;
+    double calculateAverageGamma() const;
 };
 
 // Main class to manage all epidemic data across multiple regions

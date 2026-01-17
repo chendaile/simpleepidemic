@@ -59,11 +59,11 @@ void SIRModel::run(int days) {
     }
 }
 
-void SIRModel::reset(int initialPopulation, int initialInfected, int initialRecovered) {
+void SIRModel::reset(int initialPopulation, int initialInfected, int initialRecovered, int startDay) {
     population = initialPopulation;
     history.clear();
 
-    currentData.day = 0;
+    currentData.day = startDay;
     currentData.infected = static_cast<double>(initialInfected);
     currentData.recovered = static_cast<double>(initialRecovered);
     currentData.susceptible = static_cast<double>(population - initialInfected - initialRecovered);
@@ -76,6 +76,73 @@ void SIRModel::reset(int initialPopulation, int initialInfected, int initialReco
 
 Region::Region() : population(0), confirmedCases(0), recoveredCases(0), deaths(0) {
     name[0] = '\0'; // Ensure the name is an empty string by default
+}
+
+double Region::calculateAverageBeta() const {
+    if (history.size() < 2) return 0.2; // Default fallback if not enough data
+
+    double sumBeta = 0.0;
+    int count = 0;
+
+    for (size_t t = 0; t < history.size() - 1; ++t) {
+        const auto& today = history[t];
+        const auto& nextDay = history[t + 1];
+
+        // SIR model derivation:
+        // dS/dt = - beta * S * I / N
+        // dI/dt = beta * S * I / N - gamma * I
+        // beta = (N * new_infections) / (S * I)
+        // Here, new_infections approx = nextDay.confirmed - today.confirmed
+
+        double activeToday = (double)(today.confirmed - today.recovered - today.deaths);
+        double removedToday = (double)(today.recovered + today.deaths);
+        double S_today = (double)(population - activeToday - removedToday);
+        
+        if (activeToday <= 0 || S_today <= 0) continue;
+
+        double newInfections = std::max(0.0, (double)(nextDay.confirmed - today.confirmed));
+        
+        // Avoid division by zero
+        double dailyBeta = (population * newInfections) / (S_today * activeToday);
+        
+        // Filter out unreasonable values (noise in data)
+        if (dailyBeta > 0 && dailyBeta < 5.0) {
+            sumBeta += dailyBeta;
+            count++;
+        }
+    }
+
+    return (count > 0) ? (sumBeta / count) : 0.2;
+}
+
+double Region::calculateAverageGamma() const {
+    if (history.size() < 2) return 0.1; // Default fallback
+
+    double sumGamma = 0.0;
+    int count = 0;
+
+    for (size_t t = 0; t < history.size() - 1; ++t) {
+        const auto& today = history[t];
+        const auto& nextDay = history[t + 1];
+
+        // dR/dt = gamma * I
+        // gamma = (new_recovered + new_deaths) / I
+
+        double activeToday = (double)(today.confirmed - today.recovered - today.deaths);
+        
+        if (activeToday <= 0) continue;
+
+        double newRemoved = std::max(0.0, (double)((nextDay.recovered + nextDay.deaths) - (today.recovered + today.deaths)));
+
+        double dailyGamma = newRemoved / activeToday;
+
+        if (dailyGamma > 0 && dailyGamma < 1.0) {
+            sumGamma += dailyGamma;
+            count++;
+        }
+    }
+
+    return (count > 0) ? (sumGamma / count) : 0.1;
 }
 
 

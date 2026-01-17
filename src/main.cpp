@@ -7,6 +7,11 @@
 #include <vector>
 #include <string>
 #include <numeric> // For std::accumulate
+#include <algorithm> // For std::sort
+#include <cmath> // For std::exp, std::pow
+#include <fstream> // For file export
+#include <ctime> // For timestamp
+#include <windows.h> // For GetCurrentDirectory and system commands
 
 #include "DataModel.h"
 
@@ -29,11 +34,113 @@ static AppState g_CurrentState = State_Dashboard;
 
 // Function to populate our data model with some initial test data
 void InitializeData() {
+    // 添加一个专门用于演示的城市 - 使用真实SIR模型生成数据
+    g_EpidemicData.addRegion("★ 演示城市 (Demo)", 1000000, 5000, 3000, 100);
     g_EpidemicData.addRegion("武汉 (Wuhan)", 11000000, 50340, 46464, 3869);
-    g_EpidemicData.addRegion("长沙 (Changsha)", 8000000, 242, 242, 0);
     g_EpidemicData.addRegion("上海 (Shanghai)", 24000000, 340, 300, 7);
     g_EpidemicData.addRegion("北京 (Beijing)", 21540000, 593, 586, 9);
     g_EpidemicData.addRegion("广州 (Guangzhou)", 15310000, 349, 348, 1);
+    
+    auto& regions = g_EpidemicData.getRegions();
+    
+    // ★ 演示城市 - 使用SIR模型生成60天的"完美"历史数据
+    // 这样点击"根据历史数据计算参数"后，预测曲线会完美匹配散点
+    if (regions.size() > 0) {
+        Region& demo = regions[0];
+        
+        // SIR模型参数 (用户计算后应该得到接近这些值)
+        const double demo_beta = 0.35;   // 传染率
+        const double demo_gamma = 0.1;   // 恢复率
+        const int N = 1000000;           // 总人口
+        
+        // 初始状态
+        double S = N - 100;  // 易感者
+        double I = 100;      // 初始感染者
+        double R = 0;        // 移出者
+        
+        // 用于记录累计值
+        int cumulative_confirmed = 100;
+        int cumulative_recovered = 0;
+        int cumulative_deaths = 0;
+        
+        // 生成61天数据 (Day 0-60)
+        for (int day = 0; day <= 60; ++day) {
+            // 先记录当前状态
+            demo.history.push_back({
+                day, 
+                cumulative_confirmed, 
+                cumulative_recovered, 
+                cumulative_deaths
+            });
+            
+            // 然后进行SIR模型更新（为下一天准备）
+            double new_infections = (demo_beta * S * I) / N;
+            double new_recoveries = demo_gamma * I;
+            
+            S -= new_infections;
+            I += new_infections - new_recoveries;
+            R += new_recoveries;
+            
+            // 更新累计值
+            cumulative_confirmed += static_cast<int>(new_infections);
+            cumulative_recovered += static_cast<int>(new_recoveries * 0.95); // 95%康复
+            cumulative_deaths += static_cast<int>(new_recoveries * 0.05);    // 5%死亡
+        }
+        
+        // 更新城市当前状态为Day 60的数据（历史最后一天）
+        if (!demo.history.empty()) {
+            const auto& lastDay = demo.history.back();
+            demo.confirmedCases = lastDay.confirmed;
+            demo.recoveredCases = lastDay.recovered;
+            demo.deaths = lastDay.deaths;
+        }
+    }
+    
+    // 武汉 - 简化的真实疫情数据 (30天)
+    if (regions.size() > 1) {
+        Region& wuhan = regions[1];
+        // 模拟真实的武汉疫情曲线
+        int base_confirmed[] = {
+            270, 375, 444, 549, 729, 1052, 1423, 2714, 4515, 5974,
+            7711, 9692, 11791, 13522, 16678, 19558, 22112, 24953, 27100, 29631,
+            31728, 33366, 34874, 36385, 37914, 39462, 41152, 42752, 44412, 46169
+        };
+        for (int day = 0; day < 30; ++day) {
+            int confirmed = base_confirmed[day];
+            int recovered = static_cast<int>(confirmed * (0.1 + 0.02 * day));
+            int deaths = static_cast<int>(confirmed * 0.04);
+            wuhan.history.push_back({day, confirmed, recovered, deaths});
+        }
+        
+        // 更新城市当前状态为最后一天的数据
+        if (!wuhan.history.empty()) {
+            const auto& lastDay = wuhan.history.back();
+            wuhan.confirmedCases = lastDay.confirmed;
+            wuhan.recoveredCases = lastDay.recovered;
+            wuhan.deaths = lastDay.deaths;
+        }
+    }
+    
+    // 上海 - 控制良好场景 (40天)
+    if (regions.size() > 2) {
+        Region& shanghai = regions[2];
+        for (int day = 0; day <= 40; ++day) {
+            // 线性增长后趋平
+            int confirmed = static_cast<int>(50 + 8 * day - 0.08 * day * day);
+            if (confirmed < 50) confirmed = 50;
+            int recovered = static_cast<int>(confirmed * 0.8);
+            int deaths = static_cast<int>(confirmed * 0.02);
+            shanghai.history.push_back({day, confirmed, recovered, deaths});
+        }
+        
+        // 更新城市当前状态为最后一天的数据
+        if (!shanghai.history.empty()) {
+            const auto& lastDay = shanghai.history.back();
+            shanghai.confirmedCases = lastDay.confirmed;
+            shanghai.recoveredCases = lastDay.recovered;
+            shanghai.deaths = lastDay.deaths;
+        }
+    }
 }
 
 
@@ -117,6 +224,8 @@ void ShowDashboardPage() {
 
 // 1. Left Navigation Sidebar
 void ShowSidebar() {
+    static bool useDarkTheme = true; // Track current theme
+    
     ImGui::BeginChild("Sidebar", ImVec2(200, 0), true); 
     
     ImGui::TextDisabled("功能菜单");
@@ -134,6 +243,23 @@ void ShowSidebar() {
     
     ImGui::Spacing();
     ImGui::Separator();
+    
+    // Theme toggle button
+    ImGui::Text("界面主题:");
+    if (useDarkTheme) {
+        if (ImGui::Button("[夜间] -> 切换至白天", ImVec2(-1, 0))) {
+            ImGui::StyleColorsLight();
+            useDarkTheme = false;
+        }
+    } else {
+        if (ImGui::Button("[白天] -> 切换至夜间", ImVec2(-1, 0))) {
+            ImGui::StyleColorsDark();
+            useDarkTheme = true;
+        }
+    }
+    
+    ImGui::Spacing();
+    ImGui::Separator();
     ImGui::Text("系统状态: 正常");
     ImGui::Text("用户: Admin");
     
@@ -146,9 +272,76 @@ void ShowDataPage() {
     ImGui::Separator();
     
     // --- Toolbar ---
+    static bool exportSuccess = false;
+    static std::string exportedFilePath;
+    
     if (ImGui::Button("录入新城市 (+)")) { ImGui::OpenPopup("Add New Region"); }
     ImGui::SameLine();
-    ImGui::Button("导出 Excel");
+    
+    // Export to CSV button
+    if (ImGui::Button("导出 Excel (CSV)")) {
+        auto& regions = g_EpidemicData.getRegions();
+        
+        // Generate filename with timestamp
+        std::time_t now = std::time(nullptr);
+        char timestamp[32];
+        std::strftime(timestamp, sizeof(timestamp), "%Y%m%d_%H%M%S", std::localtime(&now));
+        std::string filename = std::string("epidemic_data_") + timestamp + ".csv";
+        
+        // Get full path (Windows)
+        char fullPath[MAX_PATH];
+        GetCurrentDirectoryA(MAX_PATH, fullPath);
+        exportedFilePath = std::string(fullPath) + "\\" + filename;
+        
+        // Open file for writing
+        std::ofstream file(filename);
+        if (file.is_open()) {
+            // Write CSV header with BOM for Excel UTF-8 support
+            file << "\xEF\xBB\xBF"; // UTF-8 BOM
+            file << "城市名称,总人口,累计确诊,累计治愈,累计死亡,活跃病例,风险等级\n";
+            
+            // Write data rows
+            for (const auto& r : regions) {
+                int active = r.confirmedCases - r.recoveredCases - r.deaths;
+                RiskLevel level = EpidemicData::calculateRiskLevel(r);
+                const char* riskStr = EpidemicData::getRiskLevelString(level);
+                
+                file << r.name << ","
+                     << r.population << ","
+                     << r.confirmedCases << ","
+                     << r.recoveredCases << ","
+                     << r.deaths << ","
+                     << active << ","
+                     << riskStr << "\n";
+            }
+            
+            file.close();
+            exportSuccess = true;
+        }
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("导出城市数据为CSV文件（可用Excel打开）");
+    }
+    
+    // Show export success message
+    if (exportSuccess) {
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "[导出成功!]");
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", exportedFilePath.c_str());
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton("打开文件夹")) {
+            // Open folder in Windows Explorer
+            std::string cmd = "explorer /select,\"" + exportedFilePath + "\"";
+            system(cmd.c_str());
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton("X")) {
+            exportSuccess = false;
+        }
+    }
+    
     ImGui::SameLine();
     static char searchBuffer[128] = "";
     ImGui::InputTextWithHint("##Search", "输入城市名查询...", searchBuffer, IM_ARRAYSIZE(searchBuffer));
@@ -199,56 +392,149 @@ void ShowDataPage() {
         ImGui::EndPopup();
     }
 
-    // --- Popup for "Edit Region" ---
+    // --- Popup for "Edit Region" (Merged with History Management) ---
     static int edit_index = -1;
     if (edit_index != -1) { ImGui::OpenPopup("Edit Region"); }
+    
     if (ImGui::BeginPopupModal("Edit Region", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-        static char name[128]; static int pop, confirmed, recovered, deaths;
+        static char name[128];
+        static int pop;
         static const char* error_text = "";
-
-        if (ImGui::IsWindowAppearing()) {
+        
+        Region* region = g_EpidemicData.getRegion(edit_index);
+        
+        if (ImGui::IsWindowAppearing() && region) {
             error_text = "";
-            if (Region* region = g_EpidemicData.getRegion(edit_index)) {
-                strncpy(name, region->name, 128); pop = region->population;
-                confirmed = region->confirmedCases; recovered = region->recoveredCases; deaths = region->deaths;
-            }
+            strncpy(name, region->name, 128);
+            pop = region->population;
         }
-        ImGui::InputText("城市名称", name, 128); ImGui::InputInt("总人口", &pop);
-        ImGui::InputInt("累计确诊", &confirmed); ImGui::InputInt("累计治愈", &recovered);
-        ImGui::InputInt("累计死亡", &deaths);
-
-        if (pop < 0) pop = 0;
-        if (confirmed < 0) confirmed = 0;
-        if (recovered < 0) recovered = 0;
-        if (deaths < 0) deaths = 0;
-
-        if (ImGui::Button("保存修改")) {
-            if (strlen(name) == 0) {
-                error_text = "城市名称不能为空。";
-            } else if (pop < confirmed) {
-                error_text = "总人口不能少于累计确诊数。";
-            } else if (confirmed < (recovered + deaths)) {
-                error_text = "累计确诊数不能少于治愈与死亡数之和。";
-            } else {
-                error_text = "";
-                if (Region* region = g_EpidemicData.getRegion(edit_index)) {
-                    strncpy(region->name, name, 128); region->population = pop;
-                    region->confirmedCases = confirmed; region->recoveredCases = recovered; region->deaths = deaths;
+        
+        if (region) {
+            // Tab Bar
+            if (ImGui::BeginTabBar("EditTabs")) {
+                // Tab 1: Basic Information
+                if (ImGui::BeginTabItem("基本信息")) {
+                    ImGui::Spacing();
+                    ImGui::InputText("城市名称", name, 128);
+                    ImGui::InputInt("总人口", &pop);
+                    if (pop < 0) pop = 0;
+                    
+                    ImGui::Spacing();
+                    ImGui::Separator();
+                    ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.0f, 1.0f), "当前状态（自动从历史数据获取）:");
+                    
+                    if (!region->history.empty()) {
+                        const auto& lastDay = region->history.back();
+                        ImGui::Text("Day %d 的数据:", lastDay.day);
+                        ImGui::BulletText("累计确诊: %d", lastDay.confirmed);
+                        ImGui::BulletText("累计治愈: %d", lastDay.recovered);
+                        ImGui::BulletText("累计死亡: %d", lastDay.deaths);
+                        ImGui::BulletText("活跃病例: %d", lastDay.confirmed - lastDay.recovered - lastDay.deaths);
+                    } else {
+                        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "暂无历史数据");
+                        ImGui::Text("请切换到 [历史数据] 标签添加数据");
+                    }
+                    
+                    ImGui::EndTabItem();
                 }
-                edit_index = -1; ImGui::CloseCurrentPopup();
+                
+                // Tab 2: Historical Data
+                if (ImGui::BeginTabItem("历史数据")) {
+                    static int day = 0, h_confirmed = 0, h_recovered = 0, h_deaths = 0;
+                    
+                    ImGui::Spacing();
+                    ImGui::Text("添加/修改记录:");
+                    ImGui::InputInt("第几天 (Day)", &day);
+                    ImGui::InputInt("确诊数", &h_confirmed);
+                    ImGui::InputInt("治愈数", &h_recovered);
+                    ImGui::InputInt("死亡数", &h_deaths);
+                    
+                    if (ImGui::Button("添加/更新记录")) {
+                        bool found = false;
+                        for (auto& rec : region->history) {
+                            if (rec.day == day) {
+                                rec.confirmed = h_confirmed;
+                                rec.recovered = h_recovered;
+                                rec.deaths = h_deaths;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            region->history.push_back({day, h_confirmed, h_recovered, h_deaths});
+                            std::sort(region->history.begin(), region->history.end(), 
+                                [](const HistoricalRecord& a, const HistoricalRecord& b){ return a.day < b.day; });
+                        }
+                        
+                        // Update current state from last history record
+                        if (!region->history.empty()) {
+                            const auto& lastDay = region->history.back();
+                            region->confirmedCases = lastDay.confirmed;
+                            region->recoveredCases = lastDay.recovered;
+                            region->deaths = lastDay.deaths;
+                        }
+                    }
+                    
+                    ImGui::Dummy(ImVec2(0, 10));
+                    ImGui::Text("已有历史记录 (%zu 条):", region->history.size());
+                    if (ImGui::BeginChild("HistoryList", ImVec2(500, 250), true)) {
+                        for (int i = 0; i < region->history.size(); ++i) {
+                            auto& rec = region->history[i];
+                            ImGui::Text("Day %d: 确诊:%d 治愈:%d 死亡:%d", 
+                                rec.day, rec.confirmed, rec.recovered, rec.deaths);
+                            ImGui::SameLine();
+                            if (ImGui::SmallButton((std::string("删除##") + std::to_string(i)).c_str())) {
+                                region->history.erase(region->history.begin() + i);
+                                
+                                // Update current state from new last record
+                                if (!region->history.empty()) {
+                                    const auto& lastDay = region->history.back();
+                                    region->confirmedCases = lastDay.confirmed;
+                                    region->recoveredCases = lastDay.recovered;
+                                    region->deaths = lastDay.deaths;
+                                }
+                                i--;
+                            }
+                        }
+                        ImGui::EndChild();
+                    }
+                    
+                    ImGui::EndTabItem();
+                }
+                
+                ImGui::EndTabBar();
+            }
+            
+            ImGui::Spacing();
+            ImGui::Separator();
+            
+            // Bottom buttons
+            if (ImGui::Button("保存修改", ImVec2(120, 0))) {
+                if (strlen(name) == 0) {
+                    error_text = "城市名称不能为空。";
+                } else if (pop <= 0) {
+                    error_text = "总人口必须大于0。";
+                } else {
+                    error_text = "";
+                    strncpy(region->name, name, 128);
+                    region->population = pop;
+                    edit_index = -1;
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("取消", ImVec2(120, 0))) {
+                error_text = "";
+                edit_index = -1;
+                ImGui::CloseCurrentPopup();
+            }
+            
+            if (strlen(error_text) > 0) {
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "%s", error_text);
             }
         }
-        ImGui::SameLine();
-        if (ImGui::Button("取消")) { 
-            error_text = "";
-            edit_index = -1; 
-            ImGui::CloseCurrentPopup(); 
-        }
-
-        if (strlen(error_text) > 0) {
-            ImGui::SameLine();
-            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "%s", error_text);
-        }
+        
         ImGui::EndPopup();
     }
     ImGui::Spacing();
@@ -380,6 +666,21 @@ void ShowPredictionPage() {
 
         static float beta = 0.3f, gamma = 0.1f; static int days = 90;
         bool params_changed = false;
+        
+        if (selected_region_idx < regions.size()) {
+            if (ImGui::Button("根据历史数据计算参数")) {
+                const auto& r = regions[selected_region_idx];
+                beta = (float)r.calculateAverageBeta();
+                gamma = (float)r.calculateAverageGamma();
+                should_run_sim = true;
+            }
+            ImGui::SameLine();
+            ImGui::TextDisabled("(?)");
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("根据已录入的历史确诊/治愈/死亡数据，自动估算平均传染率(Beta)和恢复率(Gamma)。\n至少需要2天的历史记录。");
+            }
+        }
+        
         params_changed |= ImGui::SliderFloat("传染率 (Beta)", &beta, 0.0f, 2.0f, "%.3f");
         params_changed |= ImGui::SliderFloat("恢复率 (Gamma)", &gamma, 0.0f, 1.0f, "%.3f");
         params_changed |= ImGui::SliderInt("预测天数", &days, 10, 365);
@@ -390,20 +691,31 @@ void ShowPredictionPage() {
         }
 
         ImGui::Spacing();
-        bool run_button_clicked = ImGui::Button("手动运行", ImVec2(148, 40));
-        ImGui::SameLine();
-        if (ImGui::Button("重置视图", ImVec2(148, 40))) {
+        if (ImGui::Button("重置视图", ImVec2(-1, 30))) {
             auto_fit_plot = true;
         }
 
-        if (first_run || should_run_sim || run_button_clicked) {
+        if (first_run || should_run_sim) {
             if (selected_region_idx < regions.size()) {
                 Region& r = regions[selected_region_idx];
                 r.simulation.setBeta(beta);
                 r.simulation.setGamma(gamma);
-                int active = r.confirmedCases - r.recoveredCases - r.deaths;
-                r.simulation.reset(r.population, active > 0 ? active : 1, r.recoveredCases + r.deaths);
-                r.simulation.run(days); // Use the new run method
+                
+                // 如果有历史数据，从历史末端继续预测
+                if (!r.history.empty()) {
+                    const auto& lastHistory = r.history.back();
+                    int startDay = lastHistory.day + 1;  // 从历史最后一天的下一天开始
+                    int active = lastHistory.confirmed - lastHistory.recovered - lastHistory.deaths;
+                    int removed = lastHistory.recovered + lastHistory.deaths;
+                    
+                    r.simulation.reset(r.population, active > 0 ? active : 1, removed, startDay);
+                } else {
+                    // 没有历史数据，从当前状态开始（Day 0）
+                    int active = r.confirmedCases - r.recoveredCases - r.deaths;
+                    r.simulation.reset(r.population, active > 0 ? active : 1, r.recoveredCases + r.deaths, 0);
+                }
+                
+                r.simulation.run(days);
             }
             if (first_run) { auto_fit_plot = true; } // Also auto-fit on the very first run
             first_run = false;
@@ -441,6 +753,34 @@ void ShowPredictionPage() {
                 ImPlot::PlotLine("易感者 (S)", plot_data.days.data(), plot_data.s.data(), plot_data.days.size());
                 ImPlot::PlotLine("感染者 (I)", plot_data.days.data(), plot_data.i.data(), plot_data.days.size());
                 ImPlot::PlotLine("移出者 (R)", plot_data.days.data(), plot_data.r.data(), plot_data.days.size());
+            }
+
+            // Draw historical data scatter points
+            if (selected_region_idx < regions.size()) {
+                Region& r = regions[selected_region_idx];
+                if (!r.history.empty()) {
+                    std::vector<double> h_days, h_I, h_R;
+                    h_days.reserve(r.history.size());
+                    h_I.reserve(r.history.size());
+                    h_R.reserve(r.history.size());
+
+                    for(const auto& rec : r.history) {
+                        h_days.push_back(static_cast<double>(rec.day));
+                        // Historical Active Infections = Confirmed - Recovered - Deaths
+                        double active = static_cast<double>(rec.confirmed - rec.recovered - rec.deaths);
+                        // Historical Removed = Recovered + Deaths
+                        double removed = static_cast<double>(rec.recovered + rec.deaths);
+                        
+                        h_I.push_back(active);
+                        h_R.push_back(removed);
+                    }
+
+                    ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle);
+                    ImPlot::PlotScatter("历史-活跃 (I)", h_days.data(), h_I.data(), h_days.size());
+                    
+                    ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
+                    ImPlot::PlotScatter("历史-移出 (R)", h_days.data(), h_R.data(), h_days.size());
+                }
             }
             ImPlot::EndPlot();
         }
