@@ -1,3 +1,10 @@
+// ====================================================================================
+// 模块名称: DataModel Implementation
+// 功能描述: 
+//   实现DataModel.h中定义的类与方法。
+//   包含SIR模型的具体数学计算逻辑，以及从历史数据反推参数的算法实现。
+// ====================================================================================
+
 #include "DataModel.h"
 #include "imgui.h" // For ImVec4
 #include <cstring>  // For strncpy
@@ -24,6 +31,11 @@ int SIRModel::getPopulation() const { return population; }
 void SIRModel::setBeta(double b) { beta = b; }
 void SIRModel::setGamma(double g) { gamma = g; }
 
+// [算法] 单步模拟 (Run Single Step)
+// 核心逻辑:
+//   基于当前状态(S, I, R)，利用SIR微分方程计算下一天的变化量。
+//   NewInfections = (beta * S * I) / N
+//   NewRecoveries = gamma * I
 void SIRModel::run_single_step() {
     // Placeholder: In the future, this will calculate the next day's S, I, R values
     if (population == 0) return;
@@ -78,6 +90,10 @@ Region::Region() : population(0), confirmedCases(0), recoveredCases(0), deaths(0
     name[0] = '\0'; // Ensure the name is an empty string by default
 }
 
+// [算法] 估算传染率 (Calculate Average Beta)
+// 逻辑:
+//   遍历历史数据，利用公式 Beta = (N * dI_added) / (S * I) 反推每一天的Beta值。
+//   最后取平均值作为该地区的估算传染率。
 double Region::calculateAverageBeta() const {
     if (history.size() < 2) return 0.2; // Default fallback if not enough data
 
@@ -115,6 +131,10 @@ double Region::calculateAverageBeta() const {
     return (count > 0) ? (sumBeta / count) : 0.2;
 }
 
+// [算法] 估算恢复率 (Calculate Average Gamma)
+// 逻辑:
+//   利用公式 Gamma = dR / I 反推。
+//   dR = 新增康复 + 新增死亡
 double Region::calculateAverageGamma() const {
     if (history.size() < 2) return 0.1; // Default fallback
 

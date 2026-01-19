@@ -13,8 +13,21 @@
 #include <ctime> // For timestamp
 #include <windows.h> // For GetCurrentDirectory and system commands
 
+// ====================================================================================
+// 模块名称: Main Entry (应用程序入口)
+// 功能描述: 
+//   应用程序的主入口文件。
+//   负责初始化ImGui图形界面环境，管理全局应用状态(CurrentState)，
+//   并调度各个功能页面(Dashboard, DataManage, Prediction)的渲染函数。
+// ====================================================================================
+
 #include "DataModel.h"
 
+// ------------------------------------------------------------------------------------
+// [全局状态]
+// 描述: 管理整个App的生命周期数据
+// 作用: g_EpidemicData是单一数据源(Single Source of Truth)；g_CurrentState控制页面路由。
+// ------------------------------------------------------------------------------------
 // --- Global Application State ---
 
 // The single source of truth for all epidemic data
@@ -32,6 +45,11 @@ static AppState g_CurrentState = State_Dashboard;
 
 // --- Data Initialization ---
 
+// ------------------------------------------------------------------------------------
+// [函数] InitializeData
+// 描述: 初始化演示数据
+// 作用: 在程序启动时，自动生成武汉、上海等城市的演示数据，包括使用SIR模型生成的模拟历史记录。
+// ------------------------------------------------------------------------------------
 // Function to populate our data model with some initial test data
 void InitializeData() {
     // 添加一个专门用于演示的城市 - 使用真实SIR模型生成数据
@@ -146,6 +164,11 @@ void InitializeData() {
 
 // --- UI Component Functions (responsible for drawing only) ---
 
+// ------------------------------------------------------------------------------------
+// [UI组件] Dashboard (总览仪表盘)
+// 描述: 首页统计显示
+// 作用: 计算并显示全地区汇总数据(总确诊、总治愈等)，并绘制柱状图对比各城市数据。
+// ------------------------------------------------------------------------------------
 // 0. Dashboard / Statistics Page
 void ShowDashboardPage() {
     ImGui::Text(">> 全局疫情数据总览");
@@ -222,6 +245,11 @@ void ShowDashboardPage() {
 }
 
 
+// ------------------------------------------------------------------------------------
+// [UI组件] Sidebar (侧边导航栏)
+// 描述: 左侧固定菜单
+// 作用: 提供页面切换导航按钮，以及夜间模式/白天模式的切换开关。
+// ------------------------------------------------------------------------------------
 // 1. Left Navigation Sidebar
 void ShowSidebar() {
     static bool useDarkTheme = true; // Track current theme
@@ -266,10 +294,26 @@ void ShowSidebar() {
     ImGui::EndChild();
 }
 
+// ------------------------------------------------------------------------------------
+// [UI组件] Data Management (数据管理)
+// 描述: 城市数据增删改查
+// 作用: 以表格形式展示所有城市数据，提供搜索、筛选、导出CSV功能，并允许用户编辑详细历史记录。
+// ------------------------------------------------------------------------------------
 // 2. Data Management Page
 void ShowDataPage() {
     ImGui::Text(">> 城市疫情分级数据管理");
     ImGui::Separator();
+
+    if (ImGui::CollapsingHeader("关于风险等级判定标准"))
+    {
+        ImGui::TextWrapped("系统根据当前活跃病例数(每10万人)来判定风险等级：");
+        ImGui::BulletText("高风险 (HIGH): > 50 例活跃病例 / 10万人");
+        ImGui::BulletText("中风险 (MID):  > 10 例活跃病例 / 10万人");
+        ImGui::BulletText("低风险 (LOW):  <= 10 例活跃病例 / 10万人");
+        ImGui::Dummy(ImVec2(0.0f, 5.0f));
+        ImGui::TextDisabled("活跃病例 = 累计确诊 - 累计治愈 - 累计死亡");
+        ImGui::Separator();
+    }
     
     // --- Toolbar ---
     static bool exportSuccess = false;
@@ -714,6 +758,13 @@ struct PlotData {
     }
 };
 
+// ------------------------------------------------------------------------------------
+// [UI组件] Prediction Model (预测模型)
+// 描述: SIR模型交互界面
+// 作用: 
+//   允许用户调整传染率(Beta)、恢复率(Gamma)等参数，实时运行SIR微分方程模拟，
+//   并将预测曲线与历史真实数据绘制在同一张图表中进行对比。
+// ------------------------------------------------------------------------------------
 // 3. Prediction Model Page
 void ShowPredictionPage() {
     ImGui::Text(">> 传染病动力学预测 (SIR Model)");
