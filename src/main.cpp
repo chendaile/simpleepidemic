@@ -345,6 +345,15 @@ void ShowDataPage() {
     ImGui::SameLine();
     static char searchBuffer[128] = "";
     ImGui::InputTextWithHint("##Search", "输入城市名查询...", searchBuffer, IM_ARRAYSIZE(searchBuffer));
+    
+    // 风险等级筛选
+    ImGui::SameLine();
+    ImGui::Text("风险等级:");
+    ImGui::SameLine();
+    static int riskFilter = 0; // 0=全部, 1=高风险, 2=中风险, 3=低风险
+    const char* riskItems[] = { "全部", "高风险", "中风险", "低风险" };
+    ImGui::SetNextItemWidth(120);
+    ImGui::Combo("##RiskFilter", &riskFilter, riskItems, IM_ARRAYSIZE(riskItems));
 
     // --- Popup for "Add New Region" ---
     if (ImGui::BeginPopupModal("Add New Region", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -539,14 +548,104 @@ void ShowDataPage() {
     }
     ImGui::Spacing();
 
+    // --- 历史记录查询弹窗 ---
+    static int history_view_index = -1;
+    if (history_view_index != -1) { 
+        ImGui::OpenPopup("View History"); 
+    }
+    
+    if (ImGui::BeginPopupModal("View History", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        auto& regions = g_EpidemicData.getRegions();
+        if (history_view_index >= 0 && history_view_index < regions.size()) {
+            const Region& region = regions[history_view_index];
+            
+            ImGui::Text("城市: %s", region.name);
+            ImGui::Separator();
+            
+            if (!region.history.empty()) {
+                // 显示历史数据趋势图
+                std::vector<double> hist_days, hist_confirmed, hist_recovered, hist_deaths, hist_active;
+                for (const auto& rec : region.history) {
+                    hist_days.push_back(static_cast<double>(rec.day));
+                    hist_confirmed.push_back(static_cast<double>(rec.confirmed));
+                    hist_recovered.push_back(static_cast<double>(rec.recovered));
+                    hist_deaths.push_back(static_cast<double>(rec.deaths));
+                    hist_active.push_back(static_cast<double>(rec.confirmed - rec.recovered - rec.deaths));
+                }
+                
+                static bool fit_hist_axes = false;
+                
+                ImGui::Text("历史数据趋势图:");
+                ImGui::SameLine();
+                if (ImGui::Button("重置视图", ImVec2(120, 0))) {
+                    fit_hist_axes = true;
+                }
+                ImGui::SameLine();
+                ImGui::TextDisabled("(提示: 可以用鼠标拖拽和滚轮缩放图表)");
+                
+                if (fit_hist_axes) {
+                    ImPlot::SetNextAxesToFit();
+                    fit_hist_axes = false;
+                }
+                
+                if (ImPlot::BeginPlot("##HistoryPlot", ImVec2(800, 400))) {
+                    ImPlot::SetupAxes("天数", "病例数");
+                    // 使用散点图显示历史数据点
+                    ImPlot::PlotScatter("累计确诊", hist_days.data(), hist_confirmed.data(), hist_days.size());
+                    ImPlot::PlotScatter("累计治愈", hist_days.data(), hist_recovered.data(), hist_days.size());
+                    ImPlot::PlotScatter("累计死亡", hist_days.data(), hist_deaths.data(), hist_days.size());
+                    ImPlot::PlotScatter("活跃病例", hist_days.data(), hist_active.data(), hist_days.size());
+                    ImPlot::EndPlot();
+                }
+                
+                ImGui::Spacing();
+                ImGui::Text("历史记录详情 (共 %zu 条):", region.history.size());
+                if (ImGui::BeginChild("HistoryDetails", ImVec2(800, 150), true)) {
+                    if (ImGui::BeginTable("HistTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+                        ImGui::TableSetupColumn("天数");
+                        ImGui::TableSetupColumn("确诊");
+                        ImGui::TableSetupColumn("治愈");
+                        ImGui::TableSetupColumn("死亡");
+                        ImGui::TableSetupColumn("活跃");
+                        ImGui::TableHeadersRow();
+                        
+                        for (const auto& rec : region.history) {
+                            ImGui::TableNextRow();
+                            ImGui::TableSetColumnIndex(0); ImGui::Text("%d", rec.day);
+                            ImGui::TableSetColumnIndex(1); ImGui::Text("%d", rec.confirmed);
+                            ImGui::TableSetColumnIndex(2); ImGui::Text("%d", rec.recovered);
+                            ImGui::TableSetColumnIndex(3); ImGui::Text("%d", rec.deaths);
+                            ImGui::TableSetColumnIndex(4); ImGui::Text("%d", rec.confirmed - rec.recovered - rec.deaths);
+                        }
+                        
+                        ImGui::EndTable();
+                    }
+                    ImGui::EndChild();
+                }
+            } else {
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "该地区暂无历史数据");
+                ImGui::TextWrapped("提示: 您可以点击\"修改\"按钮，在\"历史数据\"标签中添加历史记录。");
+            }
+        }
+        
+        ImGui::Spacing();
+        if (ImGui::Button("关闭", ImVec2(120, 0))) {
+            history_view_index = -1;
+            ImGui::CloseCurrentPopup();
+        }
+        
+        ImGui::EndPopup();
+    }
+
     // --- Data Table ---
-    if (ImGui::BeginTable("TableData", 7, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable)) {
+    if (ImGui::BeginTable("TableData", 8, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable)) {
         ImGui::TableSetupColumn("城市名称");
         ImGui::TableSetupColumn("总人口");
         ImGui::TableSetupColumn("累计确诊");
         ImGui::TableSetupColumn("累计治愈");
         ImGui::TableSetupColumn("累计死亡");
         ImGui::TableSetupColumn("当前风险等级");
+        ImGui::TableSetupColumn("历史记录");
         ImGui::TableSetupColumn("操作");
         ImGui::TableHeadersRow();
 
@@ -554,7 +653,14 @@ void ShowDataPage() {
         int region_to_delete = -1;
 
         for (int i = 0; i < regions.size(); ++i) {
+            // 应用搜索筛选
             if (searchBuffer[0] != '\0' && strstr(regions[i].name, searchBuffer) == nullptr) continue;
+            
+            // 应用风险等级筛选
+            RiskLevel level = EpidemicData::calculateRiskLevel(regions[i]);
+            if (riskFilter == 1 && level != RiskLevel::High) continue;
+            if (riskFilter == 2 && level != RiskLevel::Medium) continue;
+            if (riskFilter == 3 && level != RiskLevel::Low) continue;
             
             ImGui::PushID(i);
             ImGui::TableNextRow();
@@ -567,10 +673,20 @@ void ShowDataPage() {
             ImGui::TableSetColumnIndex(4); ImGui::Text("%d", region.deaths);
 
             ImGui::TableSetColumnIndex(5);
-            RiskLevel level = EpidemicData::calculateRiskLevel(region);
             ImGui::TextColored(EpidemicData::getRiskLevelColor(level), "%s", EpidemicData::getRiskLevelString(level));
 
             ImGui::TableSetColumnIndex(6);
+            if (!region.history.empty()) {
+                ImGui::Text("%zu 条", region.history.size());
+                ImGui::SameLine();
+                if (ImGui::SmallButton("查看")) { 
+                    history_view_index = i; 
+                }
+            } else {
+                ImGui::TextDisabled("无");
+            }
+
+            ImGui::TableSetColumnIndex(7);
             if (ImGui::Button("修改")) { edit_index = i; }
             ImGui::SameLine();
             if (ImGui::Button("删除")) { region_to_delete = i; }
