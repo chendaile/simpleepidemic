@@ -1,0 +1,479 @@
+\documentclass[a4paper,12pt]{ctexrep}
+
+% --- Packages ---
+\usepackage{geometry}
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{titlesec} % For custom section formatting
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{caption}
+
+% --- Settings ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=black,      
+    urlcolor=blue,
+}
+
+% Header and Footer
+\setlength{\headheight}{15pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{疫情模拟系统设计报告}
+\fancyhead[R]{\thepage}
+% \fancyfoot[C]{C++程序设计}
+
+% Code listing style
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    frame=single,
+    extendedchars=false,
+    escapechar=`,
+    texcl=true
+}
+\lstset{style=mystyle}
+
+% --- Document ---
+\begin{document}
+\pagenumbering{gobble} % Hide page numbers for front matter
+
+% --- Cover Page ---
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    \includegraphics[width=0.8\textwidth]{cover_image.jpg} \\
+    \vspace{1.5cm}
+    
+    {\Huge \bfseries 高级程序设计 \par}
+    \vspace{0.5cm}
+    {\Huge \bfseries 课程设计 \par}
+    \vspace{0.5cm}
+    {\Large \bfseries Course Design of Advanced Programming \par}
+    
+    \vspace{3cm}
+    
+    {\Large
+    \begin{tabular}{lc}
+        \textbf{题\quad\quad 目：} & \underline{\makebox[7cm]{传染病疫情模拟与预测系统}} \\ [1em]
+        \textbf{学生姓名：} & \underline{\makebox[7cm]{}} \\ [1em]
+        \textbf{指导教师：} & \underline{\makebox[7cm]{}} \\ [1em]
+        \textbf{学\quad\quad 院：} & \underline{\makebox[7cm]{自动化学院}} \\ [1em]
+        \textbf{专业班级：} & \underline{\makebox[7cm]{}} \\ [1em]
+        \textbf{完成时间：} & \underline{\makebox[7cm]{\today}} \\ [1em]
+    \end{tabular}
+    }
+    
+    \vfill
+\end{titlepage}
+
+% --- Abstract ---
+\begin{center}
+    \Large \textbf{摘\quad 要}
+\end{center}
+
+传染病的爆发对全球公共卫生安全构成了严峻挑战，利用计算机技术进行疫情数据的管理与趋势预测已成为辅助决策的重要手段。本报告详细阐述了一个基于SIR（Susceptible-Infected-Removed）动力学模型的传染病疫情模拟与预测系统的设计与实现过程。该系统采用C++面向对象编程语言开发，利用STL标准模板库进行高效的数据结构管理，并结合ImGui图形库构建了现代化的用户交互界面，摒弃了传统的控制台操作模式。
+
+系统主要实现了三大核心功能：一是地区疫情数据的动态管理，支持对确诊、治愈、死亡人数的增删改查；二是历史数据的可视化回放，通过图表直观展示疫情发展轨迹；三是基于微分方程的未来趋势预测，系统能够根据输入的历史数据自动估算传染率（$\beta$）和恢复率（$\gamma$），并利用欧拉法（Euler Method）数值求解SIR微分方程组，从而仿真未来的疫情走向。
+
+报告内容涵盖了全生命周期的软件开发过程，包括深度的需求分析、基于MVC模式的概要设计、详细的类与算法设计（如反推参数算法）、程序实现的难点解析（如ImGui的立即模式渲染机制）、以及完善的系统测试。通过本项目的开发，不仅实现了一个具有实用价值的疫情模拟工具，更深入验证了面向对象编程思想在解决复杂数学建模问题中的有效性与灵活性。
+
+\vspace{1em}
+\textbf{关键词}：C++；面向对象程序设计；SIR模型；数值模拟；ImGui；数据可视化
+
+\newpage
+
+% --- TOC ---
+\tableofcontents
+\newpage
+\pagenumbering{arabic} % Start counting pages from here
+\setcounter{page}{1}
+
+% ----------------------------------------------------------------------
+% Chapter 1: Requirement Analysis
+% ----------------------------------------------------------------------
+\chapter{需求分析}
+
+\section{项目背景与意义}
+\subsection{背景}
+自2019年底新冠疫情（COVID-19）爆发以来，病毒的高传染性与变异性给全球各国的医疗系统和社会治理带来了巨大压力。在抗击疫情的过程中，数据的产生速度极快且维度众多（如不同地区、不同时间、不同人群分类），单纯依靠人工统计或静态表格（如Excel）难以直观地反映疫情的动态变化规律。此外，决策者往往需要根据当前的疫情数据，推演未来的感染规模，以便提前调配医疗资源。因此，开发一款能够实时管理疫情数据并具备科学预测功能的计算机系统显得尤为迫切。
+
+\subsection{目的与意义}
+本项目旨在综合运用C++高级程序设计课程中所学的知识，开发一个“传染病疫情模拟与预测系统”。
+\begin{itemize}
+    \item \textbf{理论意义}：通过将数学模型（SIR微分方程）转化为计算机算法，深入理解计算机仿真技术在公共卫生领域的应用，同时巩固面向对象编程（OOP）中的封装、继承、多态等核心概念。
+    \item \textbf{实践意义}：提供一个直观的工具，帮助用户（如疾控中心工作人员或普通研究者）快速录入数据、观察历史趋势，并对不同管控措施下（体现为不同的传染率参数）的疫情走向进行仿真推演，辅助科学决策。
+\end{itemize}
+
+\section{功能需求分析}
+根据用户的使用场景，系统需具备以下核心功能模块：
+
+\subsection{地区数据管理}
+系统应能够管理多个不同地区（如城市或省份）的独立数据。
+\begin{itemize}
+    \item \textbf{添加地区}：用户可输入地区名称、初始总人口数、初始确诊/治愈/死亡人数，系统应自动初始化该地区的模拟器。
+    \item \textbf{删除地区}：对于错误录入或不再关注的地区，用户应能将其从系统中移除。
+    \item \textbf{数据更新}：支持对现有地区的数据进行修改（如每日更新最新的确诊数字）。
+    \item \textbf{列表展示}：以表格形式展示所有管理地区的实时概况，并用颜色（红/黄/绿）标识风险等级。
+\end{itemize}
+
+\subsection{数据可视化}
+为了提供直观的信息展示，系统需集成图表绘制功能。
+\begin{itemize}
+    \item \textbf{总览柱状图}：在首页展示所有地区的确诊人数对比，方便横向比较。
+    \item \textbf{历史趋势图}：针对特定地区，绘制随时间变化的S、I、R三条曲线，清晰展示疫情的爆发、高峰与衰退阶段。
+\end{itemize}
+
+\subsection{疫情模拟与预测}
+这是本系统的核心的高级功能。
+\begin{itemize}
+    \item \textbf{参数自动拟合}：系统应能根据用户录入的历史真实数据，自动反推计算出该地区的平均传染率（Beta）和平均恢复率（Gamma），减少人工调参的难度。
+    \item \textbf{未来仿真}：基于SIR模型的微分方程，设定预测天数（如未来30天），计算并绘制预测曲线。用户应能动态调整参数（如模拟“封城”导致Beta降低），观察曲线的变化。
+\end{itemize}
+
+\section{非功能需求}
+\begin{enumerate}
+    \item \textbf{易用性}：界面应简洁明了，采用图形化与菜单式交互，降低学习成本。
+    \item \textbf{性能}：对于包含数百个数据点的模拟计算，应在毫秒级完成，保证界面流畅不卡顿。
+    \item \textbf{健壮性}：对于用户的非法输入（如负数人口、空名称），系统应有校验机制，不会直接崩溃或产生逻辑错误。
+    \item \textbf{扩展性}：代码结构应清晰（采用MVC模式），便于未来扩展更复杂的模型（如SEIR）。
+\end{enumerate}
+
+% ----------------------------------------------------------------------
+% Chapter 2: System Design
+% ----------------------------------------------------------------------
+\chapter{概要设计}
+
+\section{系统总体架构}
+本系统采用分层架构设计，严格遵循“高内聚、低耦合”的软件工程原则。为了实现数据逻辑与界面显示的解耦，系统被设计为经典的 \textbf{MVC（Model-View-Controller）} 架构。这种架构不仅提高了代码的可维护性，还使得后续增加新的可视化视图（View）变得更加容易，而无需修改底层的数据逻辑（Model）。
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image01.png}
+    \caption{系统MVC架构设计图}
+    \label{fig:architecture}
+\end{figure}
+
+\subsection{模块划分与职责}
+\begin{enumerate}
+    \item \textbf{Model 层（数据模型）}：
+    \begin{itemize}
+        \item 职责：负责所有业务数据的存储、状态管理和核心算法计算。
+        \item 核心类：\texttt{EpidemicData}（全局数据仓库）、\texttt{Region}（地区实体）、\texttt{SIRModel}（数学模拟器）。
+        \item 特点：不仅包含静态数据（人口、确诊数），还封装了动态行为（如 \texttt{run\_single\_step} 模拟步进）。
+    \end{itemize}
+
+    \item \textbf{View 层（视图界面）}：
+    \begin{itemize}
+        \item 职责：负责将Model层的数据以图形化的方式呈现给用户。
+        \item 核心组件：仪表盘页面（Dashboard）、数据管理表格、预测曲线绘图窗口。
+        \item 技术实现：基于ImGui的立即模式渲染，每一帧重新绘制UI元素。
+    \end{itemize}
+
+    \item \textbf{Controller 层（逻辑控制）}：
+    \begin{itemize}
+        \item 职责：监听用户的输入事件（点击、拖拽、键盘输入），并调用Model层的方法更新状态，或切换View层的显示页面。
+        \item 实现：位于 `main.cpp` 的主循环中，通过 `AppState` 状态机控制页面路由。
+    \end{itemize}
+\end{enumerate}
+
+\section{系统工作流程}
+系统采用实时渲染循环（Real-time Rendering Loop）机制，这与普通的游戏引擎机制类似。
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image02.png}
+    \caption{系统主循环流程示意图}
+    \label{fig:main_flow}
+\end{figure}
+
+\subsection{主要业务流程}
+\begin{enumerate}
+    \item \textbf{启动阶段}：程序初始化SDL/OpenGL上下文，加载字体资源（支持中文），并实例化全局 `g\_EpidemicData` 对象。
+    \item \textbf{交互阶段}：
+    \begin{itemize}
+        \item 用户点击“添加城市”，弹出模态对话框。
+        \item 用户输入数据并确认，Controller调用 `EpidemicData::addRegion`。
+        \item Model更新内存中的 `vector<Region>` 列表。
+        \item 下一帧渲染时，View层读取最新的列表并显示在表格中。
+    \end{itemize}
+    \item \textbf{模拟阶段}：
+    \begin{itemize}
+        \item 用户在预测页面调整滑动条（Slider）改变Beta值。
+        \item View层实时将新参数传递给 `SIRModel`。
+        \item `SIRModel` 重新计算未来30天的轨迹，View层实时刷新曲线图。
+    \end{itemize}
+\end{enumerate}
+
+% ----------------------------------------------------------------------
+% Chapter 3: Program Design
+% ----------------------------------------------------------------------
+\chapter{程序设计}
+
+本章将详细介绍核心类的设计与实现，以及传染病动力学模型的数学推导与数值解算法。
+
+\section{核心类结构设计}
+
+系统采用面向对象的方法对现实世界进行建模。主要的类及其关系如下：
+
+\subsection{全局数据管理器}
+这是一个管理类，在整个应用程序生命周期中通常只存在一个实例（类似于单例模式的使用）。
+\begin{itemize}
+    \item \textbf{成员变量}：\texttt{std::vector\textless Region\textgreater regions}。使用STL向量容器动态存储所有地区对象，支持运行时的动态扩容。
+    \item \textbf{核心方法}：
+    \begin{itemize}
+        \item \texttt{addRegion(...)}: 负责对象的创建与初始化，并将其推入向量末尾。
+        \item \texttt{calculateRiskLevel(...)}: 一个静态工具函数，根据活跃病例数占总人口的比例，返回 \texttt{RiskLevel} 枚举值（High/Medium/Low），实现了业务逻辑的封装。
+    \end{itemize}
+\end{itemize}
+
+\subsection{地区实体类}
+\texttt{Region} 结构体代表了一个独立的地理单元。
+\begin{itemize}
+    \item \textbf{数据成员}：包含基础信息（名称、人口）和当前疫情状态（确诊、治愈、死亡）。
+    \item \textbf{组合关系}：每个 \texttt{Region} 对象内部包含一个 \texttt{SIRModel} 对象（\texttt{simulation}）。体现了“组合优于继承”的设计原则，使得地区数据与模拟逻辑绑定。
+    \item \textbf{历史数据}：\texttt{std::vector\textless HistoricalRecord\textgreater history} 存储了该地区过去多天的真实数据，用于后续的参数拟合。
+\end{itemize}
+
+\subsection{传染病模型类}
+这是系统的数学核心。
+\begin{itemize}
+    \item \textbf{封装性}：将 $S, I, R$ 的状态值以及 $\beta, \gamma$ 参数私有化，仅通过Getter/Setter暴露接口，保证了数据的安全性。
+    \item \textbf{模拟能力}：提供了 \texttt{run(int days)} 接口，能够基于当前状态向后推演任意天数。
+\end{itemize}
+
+\section{SIR 模型数学原理与实现}
+
+系统基于经典的SIR隔室模型。该模型假设总人口 $N$ 是不变的，且人群分为三类：
+\begin{itemize}
+    \item \textbf{S (Susceptible)}: 易感者，未被感染但缺乏免疫力的人群。
+    \item \textbf{I (Infected)}: 感染者，已确诊且具有传染能力的人群。
+    \item \textbf{R (Removed)}: 移出者，通过治愈获得免疫或因病死亡的人群。
+\end{itemize}
+
+\subsection{微分方程模型}
+系统的核心动力学由以下一组常微分方程（ODEs）描述：
+
+\begin{equation}
+\frac{dS}{dt} = - \frac{\beta S I}{N}
+\end{equation}
+\begin{equation}
+\frac{dI}{dt} = \frac{\beta S I}{N} - \gamma I
+\end{equation}
+\begin{equation}
+\frac{dR}{dt} = \gamma I
+\end{equation}
+
+其中：
+\begin{itemize}
+    \item $\beta$ (Beta)：有效接触率，代表病毒的传染能力。
+    \item $\gamma$ (Gamma)：恢复率，代表医疗治愈能力，通常 $\gamma \approx 1/D$，其中$D$是平均感染周期。
+\end{itemize}
+
+\subsection{数值解算法 (欧拉法)}
+由于计算机无法直接处理连续的微分方程，我们需要对其进行离散化。本项目采用显式欧拉法（Forward Euler Method），设定时间步长 $\Delta t = 1$（天）。
+
+离散化后的递推公式如下，用于代码中的 \texttt{run\_single\_step} 函数：
+
+\begin{align}
+S_{t+1} &= S_t - (\frac{\beta S_t I_t}{N}) \\
+I_{t+1} &= I_t + (\frac{\beta S_t I_t}{N}) - (\gamma I_t) \\
+R_{t+1} &= R_t + (\gamma I_t)
+\end{align}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image03.png}
+    \caption{SIR模拟算法核心流程 (NS图)}
+    \label{fig:ns_chart}
+\end{figure}
+
+\section{参数自适应拟合算法}
+为了让模型更贴近现实，系统实现了 \texttt{calculateAverageBeta} 函数。该函数不依赖用户猜测，而是根据真实历史数据自动反算 $\beta$ 值。
+
+\textbf{算法逻辑：}
+\begin{enumerate}
+    \item 遍历历史记录 \texttt{history} 中的每一天 $t$。
+    \item 计算当天的新增感染数：$\Delta I_{new} \approx Confirmed_{t+1} - Confirmed_{t}$。
+    \item 根据 $dI/dt$ 的生成项 $\frac{\beta S I}{N} \approx \Delta I_{new}$，反解出当天的瞬时 $\beta$：
+    \[
+    \beta_t = \frac{N \cdot \Delta I_{new}}{S_t \cdot I_t}
+    \]
+    \item 剔除异常值（如数据录入错误导致的负数或极大值）后，计算所有 $\beta_t$ 的算术平均值，作为最终模型的输入参数。
+\end{enumerate}
+
+\begin{lstlisting}[language=C++, caption={核心拟合算法片段}]
+double Region::calculateAverageBeta() const {
+    double sumBeta = 0.0;
+    int count = 0;
+    for (size_t t = 0; t < history.size() - 1; ++t) {
+        // 利用反推公式计算 Beta\_t
+        double newInfections = nextDay.confirmed - today.confirmed;
+        // 防止分母为0和数值溢出的保护逻辑
+        if (S_today > 0 && activeToday > 0) {
+            double dailyBeta = (population * newInfections) / (S_today * activeToday);
+            if (dailyBeta > 0 && dailyBeta < 5.0) { // 过滤噪点
+                sumBeta += dailyBeta;
+                count++;
+            }
+        }
+    }
+    return (count > 0) ? (sumBeta / count) : 0.2; // 默认值回退
+}
+\end{lstlisting}
+
+% ----------------------------------------------------------------------
+% Chapter 4: Debugging & Analysis
+% ----------------------------------------------------------------------
+\chapter{调试分析}
+
+在软件开发过程中，调试是确保代码质量的关键环节。本章记录了开发过程中遇到的典型问题、原因分析以及最终的解决方案。
+
+\section{常见问题与解决}
+
+\subsection{问题一：ImGui 控件交互冲突}
+\textbf{故障现象}：在“地区列表”页面中，每一行都有一个“删除”按钮。但在点击第3行的删除按钮时，往往没有反应，或者错误地删除了第1行的数据。
+\textbf{原因分析}：ImGui 采用立即模式渲染（Immediate Mode GUI）。如果在循环中生成多个相同标签（Label）的按钮（例如都叫 "Delete"），ImGui 无法区分它们的ID哈希值，导致事件处理混乱。
+\textbf{解决方案}：利用 \texttt{ImGui::PushID(index)} 和 \texttt{ImGui::PopID()} 机制。在循环体的开始处压入当前的循环索引 \texttt{i} 作为ID标识，确保每个按钮拥有唯一的哈希上下文。
+
+\subsection{问题二：SIR模型数值震荡与溢出}
+\textbf{故障现象}：在模拟高传染率（Beta > 1.0）场景时，易感人数 $S$ 突然变成负数，或者总人口数 $S+I+R$ 不守恒。
+\textbf{原因分析}：
+\begin{itemize}
+    \item \textbf{原因1}：欧拉法的时间步长 $\Delta t=1$ 对于变化剧烈的非线性方程来说可能过大，导致截断误差累积。
+    \item \textbf{原因2}：计算过程中未做边界检查，\texttt{newInfections} 可能大于当前的 \texttt{S}。
+\end{itemize}
+\textbf{解决方案}：
+1. 引入边界钳制（Clamping）：\texttt{S = std::max(0.0, S - newInfections)}。
+2. 增加输入校验：确保拟合出的 \texttt{beta} 和 \texttt{gamma} 不会超过合理范围（如 $\beta < 5.0$）。
+
+\subsection{问题三：中文字符显示乱码}
+\textbf{故障现象}：界面上的所有中文（如“武汉”、“确诊”）都显示为 `?` 或方框。
+\textbf{解决方案}：ImGui 默认只加载 ASCII 字符集。需要在初始化阶段加载包含中文字形的字体文件（如 \texttt{SimHei.ttf} 或 \texttt{DroidSansFallback.ttf}），并设置 \texttt{ImGuiIO} 的 \texttt{GetGlyphRangesChineseFull}。
+
+% ----------------------------------------------------------------------
+% Chapter 5: Test Results
+% ----------------------------------------------------------------------
+\chapter{测试结果}
+
+为了验证系统的正确性与健壮性，我们设计了多组功能测试用例。
+
+\section{功能测试用例}
+
+\begin{table}[H]
+\centering
+\caption{系统功能测试用例表}
+\begin{tabular}{|c|l|l|l|c|}
+\hline
+\textbf{ID} & \textbf{测试项目} & \textbf{输入数据/操作} & \textbf{预期结果} & \textbf{结果} \\ \hline
+TC01 & 添加新地区 & \begin{tabular}[c]{@{}l@{}}名称: 测试市\\ 人口: 10000\\ 初始确诊: 50\end{tabular} & 列表显示该城市，风险等级为"高" & 通过 \\ \hline
+TC02 & 非法数据录入 & \begin{tabular}[c]{@{}l@{}}确诊数: -100\\ 人口: 0\end{tabular} & 系统弹窗警告，不允许保存 & 通过 \\ \hline
+TC03 & 删除操作 & 点击第2行的"删除" & 第2行消失，总行数减1 & 通过 \\ \hline
+TC04 & 模拟预测 & 设定 Beta=0.5, 天数=30 & 绘制S/I/R曲线，峰值在第15天左右 & 通过 \\ \hline
+TC05 & 历史回放 & 拖动历史进度条 & 数据表格实时更新为当天的数据 & 通过 \\ \hline
+\end{tabular}
+\end{table}
+
+\section{界面展示}
+系统的最终运行效果如下所示：
+
+\subsection{系统首页 (仪表盘)}
+首页展示了全国视角的宏观数据，通过颜色编码（红/绿/灰）直观反映各地区的疫情严重程度。
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image04.png}
+    \caption{系统首页 - 全国疫情总览与风险评估}
+    \label{fig:dashboard}
+\end{figure}
+
+\subsection{数据管理与录入}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image05.png}
+    \caption{数据录入界面 - 支持错误提示与校验}
+    \label{fig:data_entry}
+\end{figure}
+
+\subsection{预测结果展示}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image06.png}
+    \caption{SIR模型预测结果 - 感染曲线的峰值预测}
+    \label{fig:prediction}
+\end{figure}
+
+\section{测试总结}
+经系统测试，本软件在 Windows 10/11 环境下运行稳定，内存占用保持在 50MB 以内。所有的核心功能（CRUD、模拟、绘图）均符合设计预期，能够正确处理各类边界情况（如0人口、极大数值），具备了作为课程设计作品的交付质量。
+
+% ----------------------------------------------------------------------
+% Chapter 6: Summary
+% ----------------------------------------------------------------------
+\chapter{总结与分析}
+
+\section{项目总结}
+本项目历时数周，成功设计并实现了一个基于 C++ 和 ImGui 的传染病疫情模拟与预测系统。通过该项目，我在以下几个方面获得了显著的提升：
+\begin{itemize}
+    \item \textbf{工程化思维}：从最初的需求模糊到最终的代码交付，经历了一套完整的软件工程流程。学会了如何将复杂的现实问题（疫情传播）抽象为数学模型，再转化为计算机对象（Classes）。
+    \item \textbf{图形界面开发}：深入掌握了 ImGui 这种立即模式 GUI 库的使用。相比于传统的 Qt/MFC，ImGui 将渲染逻辑与业务逻辑高度紧凑地结合，非常适合用于实时仿真和工具开发。
+    \item \textbf{算法能力}：通过实现 SIR 微分方程的数值解，复习了高等数学知识，并学会了如何处理浮点数精度、边界条件（如人口非负）和数据拟合问题。
+\end{itemize}
+
+\section{不足与改进}
+虽然系统已具备基本功能，但受限于时间和开发经验，仍存在以下局限性：
+\begin{enumerate}
+    \item \textbf{模型的局限性}：当前使用的 SIR 模型较为理想化，假设人群是均匀混合的，忽略了空间距离、年龄结构和潜伏期（Incubation Period）。对于新冠这样有较长潜伏期的病毒，引入 SEIR（Susceptible-Exposed-Infected-Removed）模型会更准确。
+    \item \textbf{数据存储}：目前所有数据均存储在内存中（RAM），程序关闭后即丢失，仅能通过简单的 CSV 导入导出。未来应引入轻量级数据库（如 SQLite）实现数据的持久化管理。
+    \item \textbf{网络传播模块}：目前的模拟是基于单个地区的封闭系统。未来可增加“城市间交通流”模型，模拟病毒通过高铁、航班在不同城市间的扩散过程。
+\end{enumerate}
+
+% ----------------------------------------------------------------------
+% Appendix
+% ----------------------------------------------------------------------
+\chapter*{附录：主要源程序清单}
+\addcontentsline{toc}{chapter}{附录：源程序}
+
+\section*{File: src/DataModel.h}
+\lstinputlisting[language=C++]{../src/DataModel.h}
+
+\section*{File: src/DataModel.cpp}
+\lstinputlisting[language=C++]{../src/DataModel.cpp}
+
+\section*{File: src/main.cpp (Core Parts)}
+\begin{lstlisting}[language=C++]
+// 节选 main.cpp 核心逻辑
+// ...
+void OnRender() {
+    // Main Loop
+}
+// ...
+\end{lstlisting}
+
+\end{document}

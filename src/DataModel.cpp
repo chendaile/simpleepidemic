@@ -92,7 +92,7 @@ Region::Region() : population(0), confirmedCases(0), recoveredCases(0), deaths(0
 
 // [算法] 估算传染率 (Calculate Average Beta)
 // 逻辑:
-//   遍历历史数据，利用公式 Beta = (N * dI_added) / (S * I) 反推每一天的Beta值。
+//   遍历历史数据，利用SIR微分方程反推每一天的Beta值。
 //   最后取平均值作为该地区的估算传染率。
 double Region::calculateAverageBeta() const {
     if (history.size() < 2) return 0.2; // Default fallback if not enough data
@@ -107,8 +107,8 @@ double Region::calculateAverageBeta() const {
         // SIR model derivation:
         // dS/dt = - beta * S * I / N
         // dI/dt = beta * S * I / N - gamma * I
-        // beta = (N * new_infections) / (S * I)
-        // Here, new_infections approx = nextDay.confirmed - today.confirmed
+        // beta calculation
+        // new infections approximation
 
         double activeToday = (double)(today.confirmed - today.recovered - today.deaths);
         double removedToday = (double)(today.recovered + today.deaths);
@@ -146,7 +146,7 @@ double Region::calculateAverageGamma() const {
         const auto& nextDay = history[t + 1];
 
         // dR/dt = gamma * I
-        // gamma = (new_recovered + new_deaths) / I
+        // gamma calculation
 
         double activeToday = (double)(today.confirmed - today.recovered - today.deaths);
         

@@ -1,0 +1,39 @@
+\contentsline {chapter}{\numberline {第一章\hspace {.3em}}需求分析}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}项目背景与意义}{1}{section.1.1}%
+\contentsline {subsection}{\numberline {1.1.1}背景}{1}{subsection.1.1.1}%
+\contentsline {subsection}{\numberline {1.1.2}目的与意义}{1}{subsection.1.1.2}%
+\contentsline {section}{\numberline {1.2}功能需求分析}{1}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}地区数据管理}{1}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}数据可视化}{2}{subsection.1.2.2}%
+\contentsline {subsection}{\numberline {1.2.3}疫情模拟与预测}{2}{subsection.1.2.3}%
+\contentsline {section}{\numberline {1.3}非功能需求}{2}{section.1.3}%
+\contentsline {chapter}{\numberline {第二章\hspace {.3em}}概要设计}{3}{chapter.2}%
+\contentsline {section}{\numberline {2.1}系统总体架构}{3}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}模块划分与职责}{4}{subsection.2.1.1}%
+\contentsline {section}{\numberline {2.2}系统工作流程}{4}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}主要业务流程}{5}{subsection.2.2.1}%
+\contentsline {chapter}{\numberline {第三章\hspace {.3em}}程序设计}{6}{chapter.3}%
+\contentsline {section}{\numberline {3.1}核心类结构设计}{6}{section.3.1}%
+\contentsline {subsection}{\numberline {3.1.1}全局数据管理器}{6}{subsection.3.1.1}%
+\contentsline {subsection}{\numberline {3.1.2}地区实体类}{6}{subsection.3.1.2}%
+\contentsline {subsection}{\numberline {3.1.3}传染病模型类}{7}{subsection.3.1.3}%
+\contentsline {section}{\numberline {3.2}SIR 模型数学原理与实现}{7}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}微分方程模型}{7}{subsection.3.2.1}%
+\contentsline {subsection}{\numberline {3.2.2}数值解算法 (欧拉法)}{7}{subsection.3.2.2}%
+\contentsline {section}{\numberline {3.3}参数自适应拟合算法}{8}{section.3.3}%
+\contentsline {chapter}{\numberline {第四章\hspace {.3em}}调试分析}{10}{chapter.4}%
+\contentsline {section}{\numberline {4.1}常见问题与解决}{10}{section.4.1}%
+\contentsline {subsection}{\numberline {4.1.1}问题一：ImGui 控件交互冲突}{10}{subsection.4.1.1}%
+\contentsline {subsection}{\numberline {4.1.2}问题二：SIR模型数值震荡与溢出}{10}{subsection.4.1.2}%
+\contentsline {subsection}{\numberline {4.1.3}问题三：中文字符显示乱码}{10}{subsection.4.1.3}%
+\contentsline {chapter}{\numberline {第五章\hspace {.3em}}测试结果}{11}{chapter.5}%
+\contentsline {section}{\numberline {5.1}功能测试用例}{11}{section.5.1}%
+\contentsline {section}{\numberline {5.2}界面展示}{11}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}系统首页 (仪表盘)}{11}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}数据管理与录入}{12}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}预测结果展示}{13}{subsection.5.2.3}%
+\contentsline {section}{\numberline {5.3}测试总结}{13}{section.5.3}%
+\contentsline {chapter}{\numberline {第六章\hspace {.3em}}总结与分析}{14}{chapter.6}%
+\contentsline {section}{\numberline {6.1}项目总结}{14}{section.6.1}%
+\contentsline {section}{\numberline {6.2}不足与改进}{14}{section.6.2}%
+\contentsline {chapter}{附录：源程序}{15}{chapter*.9}%
