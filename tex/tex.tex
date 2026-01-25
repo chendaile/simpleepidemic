@@ -84,10 +84,10 @@
     {\Large
     \begin{tabular}{lc}
         \textbf{题\quad\quad 目：} & \underline{\makebox[7cm]{传染病疫情模拟与预测系统}} \\ [1em]
-        \textbf{学生姓名：} & \underline{\makebox[7cm]{}} \\ [1em]
-        \textbf{指导教师：} & \underline{\makebox[7cm]{}} \\ [1em]
+        \textbf{学生姓名：} & \underline{\makebox[7cm]{魏中钧}} \\ [1em]
+        \textbf{指导教师：} & \underline{\makebox[7cm]{唐朝晖}} \\ [1em]
         \textbf{学\quad\quad 院：} & \underline{\makebox[7cm]{自动化学院}} \\ [1em]
-        \textbf{专业班级：} & \underline{\makebox[7cm]{}} \\ [1em]
+        \textbf{专业班级：} & \underline{\makebox[7cm]{自动化2401班}} \\ [1em]
         \textbf{完成时间：} & \underline{\makebox[7cm]{\today}} \\ [1em]
     \end{tabular}
     }
@@ -102,7 +102,7 @@
 
 传染病的爆发对全球公共卫生安全构成了严峻挑战，利用计算机技术进行疫情数据的管理与趋势预测已成为辅助决策的重要手段。本报告详细阐述了一个基于SIR（Susceptible-Infected-Removed）动力学模型的传染病疫情模拟与预测系统的设计与实现过程。该系统采用C++面向对象编程语言开发，利用STL标准模板库进行高效的数据结构管理，并结合ImGui图形库构建了现代化的用户交互界面，摒弃了传统的控制台操作模式。
 
-系统主要实现了三大核心功能：一是地区疫情数据的动态管理，支持对确诊、治愈、死亡人数的增删改查；二是历史数据的可视化回放，通过图表直观展示疫情发展轨迹；三是基于微分方程的未来趋势预测，系统能够根据输入的历史数据自动估算传染率（$\beta$）和恢复率（$\gamma$），并利用欧拉法（Euler Method）数值求解SIR微分方程组，从而仿真未来的疫情走向。
+系统主要实现了三大核心功能：一是\textbf{分国家、分城市的疫情数据统计与管理}，系统打破了单一地区的限制，支持跨国家、跨区域的多层级数据录入与并行模拟，能够满足从城市级到国家级不同维度的防控需求；二是历史数据的可视化回放，通过图表直观展示疫情发展轨迹；三是基于微分方程的未来趋势预测，系统能够根据输入的历史数据自动估算传染率（$\beta$）和恢复率（$\gamma$），并利用欧拉法（Euler Method）数值求解SIR微分方程组，从而仿真未来的疫情走向。
 
 报告内容涵盖了全生命周期的软件开发过程，包括深度的需求分析、基于MVC模式的概要设计、详细的类与算法设计（如反推参数算法）、程序实现的难点解析（如ImGui的立即模式渲染机制）、以及完善的系统测试。通过本项目的开发，不仅实现了一个具有实用价值的疫情模拟工具，更深入验证了面向对象编程思想在解决复杂数学建模问题中的有效性与灵活性。
 
@@ -124,23 +124,33 @@
 
 \section{项目背景与意义}
 \subsection{背景}
-自2019年底新冠疫情（COVID-19）爆发以来，病毒的高传染性与变异性给全球各国的医疗系统和社会治理带来了巨大压力。在抗击疫情的过程中，数据的产生速度极快且维度众多（如不同地区、不同时间、不同人群分类），单纯依靠人工统计或静态表格（如Excel）难以直观地反映疫情的动态变化规律。此外，决策者往往需要根据当前的疫情数据，推演未来的感染规模，以便提前调配医疗资源。因此，开发一款能够实时管理疫情数据并具备科学预测功能的计算机系统显得尤为迫切。
+自2019年底新冠疫情（COVID-19）爆发以来，病毒的高传染性与变异性给全球各国的医疗系统和社会治理带来了巨大压力。在抗击疫情的过程中，数据的产生速度极快且维度众多（如不同地区、不同时间、不同人群分类），单纯依靠人工统计或静态表格（如Excel）难以直观地反映疫情的动态变化规律。
+
+传统的疫情数据分析往往滞后于病毒的传播速度。决策者面临的主要挑战在于如何从海量的碎片化数据中提取出有价值的信息，并据此制定科学的防控策略（如封城、限制出行、疫苗接种等）。这就迫切需要一种能够实时处理多源数据、并具备动态推演能力的计算机辅助系统。通过对历史数据的深度挖掘与可视化展示，结合成熟的传染病动力学模型，我们不仅可以复盘过去的疫情发展脉络，更能对未来的潜在风险进行量化评估，从而实现从“被动应对”到“主动防御”的转变。因此，开发一款能够实时管理疫情数据并具备科学预测功能的计算机系统显得尤为迫切。
 
 \subsection{目的与意义}
 本项目旨在综合运用C++高级程序设计课程中所学的知识，开发一个“传染病疫情模拟与预测系统”。
 \begin{itemize}
-    \item \textbf{理论意义}：通过将数学模型（SIR微分方程）转化为计算机算法，深入理解计算机仿真技术在公共卫生领域的应用，同时巩固面向对象编程（OOP）中的封装、继承、多态等核心概念。
-    \item \textbf{实践意义}：提供一个直观的工具，帮助用户（如疾控中心工作人员或普通研究者）快速录入数据、观察历史趋势，并对不同管控措施下（体现为不同的传染率参数）的疫情走向进行仿真推演，辅助科学决策。
+    \item \textbf{理论意义}：
+    \begin{enumerate}
+        \item \textbf{数学建模的计算机实现}：通过将抽象的数学模型（SIR微分方程组）转化为具体的计算机算法，深入理解计算机仿真技术在公共卫生领域的应用。这一过程不仅验证了数学模型的有效性，也展示了数值计算方法在解决实际问题中的威力。
+        \item \textbf{面向对象编程实践}：本项目是面向对象编程（OOP）思想的典型应用场景。通过封装、继承、多态等核心机制，构建出可复用、易维护的代码结构，加深了对软件工程基本原则的理解。
+    \end{enumerate}
+    \item \textbf{实践意义}：
+    \begin{enumerate}
+        \item \textbf{辅助决策工具}：系统提供了一个直观、友好的操作界面，帮助用户（如疾控中心工作人员或普通研究者）快速录入数据、观察历史趋势。
+        \item \textbf{情景推演能力}：通过动态调整传染率参数（如模拟“封城”导致 $\beta$ 降低），系统能够对不同管控力度下的疫情走向进行仿真推演。这种“如果-那么”（What-If）分析能力，对于制定科学合理的防疫政策具有重要的参考价值。
+    \end{enumerate}
 \end{itemize}
 
 \section{功能需求分析}
 根据用户的使用场景，系统需具备以下核心功能模块：
 
 \subsection{地区数据管理}
-系统应能够管理多个不同地区（如城市或省份）的独立数据。
+系统应具备强大的多维度数据管理能力，支持\textbf{分国家、分城市}的统计输入，允许用户在同一界面下管理跨国界、跨行政区的多组疫情数据。
 \begin{itemize}
-    \item \textbf{添加地区}：用户可输入地区名称、初始总人口数、初始确诊/治愈/死亡人数，系统应自动初始化该地区的模拟器。
-    \item \textbf{删除地区}：对于错误录入或不再关注的地区，用户应能将其从系统中移除。
+    \item \textbf{多层级添加}：用户可自由定义地区粒度（如“中国-武汉”、“美国-纽约”），系统应能独立维护每个地理单元的 `Region` 对象及其 SIR 模型参数。
+    \item \textbf{跨区域并行}：系统支持同时追踪多个互不干扰的地区数据，方便用户进行横向对比分析（如对比不同国家的抗疫效果）。
     \item \textbf{数据更新}：支持对现有地区的数据进行修改（如每日更新最新的确诊数字）。
     \item \textbf{列表展示}：以表格形式展示所有管理地区的实时概况，并用颜色（红/黄/绿）标识风险等级。
 \end{itemize}
@@ -173,7 +183,9 @@
 \chapter{概要设计}
 
 \section{系统总体架构}
-本系统采用分层架构设计，严格遵循“高内聚、低耦合”的软件工程原则。为了实现数据逻辑与界面显示的解耦，系统被设计为经典的 \textbf{MVC（Model-View-Controller）} 架构。这种架构不仅提高了代码的可维护性，还使得后续增加新的可视化视图（View）变得更加容易，而无需修改底层的数据逻辑（Model）。
+本系统采用分层架构设计，严格遵循“高内聚、低耦合”的软件工程原则。为了应对复杂的业务逻辑和频繁的用户交互，系统并没有采用简单的“一站式”过程化代码，而是被设计为经典的 \textbf{MVC（Model-View-Controller）} 架构。这种架构模式将应用程序分为三个核心组件，各自承担独立的职责，极大地提高了系统的可维护性和扩展性。
+
+MVC 架构的核心优势在于它实现了数据逻辑与界面显示的彻底解耦。这意味着底层的数据处理逻辑（Model）不依赖于特定的界面展示形式（View）；反之，界面的修改或重构也不会影响到核心业务逻辑的稳定性。对于本系统而言，未来如果需要将桌面端界面移植为 Web 端或移动端，只需重写 View 层，而无需修改 Model 层和大部分 Controller 层的代码。
 
 \begin{figure}[H]
     \centering
@@ -186,22 +198,24 @@
 \begin{enumerate}
     \item \textbf{Model 层（数据模型）}：
     \begin{itemize}
-        \item 职责：负责所有业务数据的存储、状态管理和核心算法计算。
-        \item 核心类：\texttt{EpidemicData}（全局数据仓库）、\texttt{Region}（地区实体）、\texttt{SIRModel}（数学模拟器）。
-        \item 特点：不仅包含静态数据（人口、确诊数），还封装了动态行为（如 \texttt{run\_single\_step} 模拟步进）。
+        \item \textbf{核心职责}：Model 层是系统的“大脑”，负责封装应用程序的所有业务逻辑和数据状态。它不包含任何与界面显示相关的代码，保证了纯粹性。
+        \item \textbf{数据管理}：使用 \texttt{EpidemicData} 类作为全局数据仓库，管理所有的地区对象。
+        \item \textbf{算法实现}：\texttt{SIRModel} 类封装了传染病动力学方程，负责根据输入的 $\beta, \gamma$ 参数计算下一时刻的疫情状态。
+        \item \textbf{状态更新}：提供标准化的接口（如 \texttt{addRegion}, \texttt{update}）供 Controller 调用，确保数据的一致性和完整性。
     \end{itemize}
 
     \item \textbf{View 层（视图界面）}：
     \begin{itemize}
-        \item 职责：负责将Model层的数据以图形化的方式呈现给用户。
-        \item 核心组件：仪表盘页面（Dashboard）、数据管理表格、预测曲线绘图窗口。
-        \item 技术实现：基于ImGui的立即模式渲染，每一帧重新绘制UI元素。
+        \item \textbf{核心职责}：View 层是系统的“脸面”，负责将 Model 层的数据以图形、表格、文本等形式呈现给用户，并提供交互控件（按钮、输入框）。
+        \item \textbf{可视化呈现}：利用 ImGui 库的强大绘图能力，将抽象的数值转化为直观的折线图（S-I-R 曲线）和柱状图。
+        \item \textbf{用户反馈}：当发生错误或操作成功时，通过弹窗或颜色变化给予用户即时的视觉反馈。
     \end{itemize}
 
     \item \textbf{Controller 层（逻辑控制）}：
     \begin{itemize}
-        \item 职责：监听用户的输入事件（点击、拖拽、键盘输入），并调用Model层的方法更新状态，或切换View层的显示页面。
-        \item 实现：位于 `main.cpp` 的主循环中，通过 `AppState` 状态机控制页面路由。
+        \item \textbf{核心职责}：Controller 层是连接 Model 与 View 的“桥梁”。它监听用户的输入事件，并决定如何响应。
+        \item \textbf{事件处理}：解析来自鼠标点击、键盘输入的原始信号，将其转化为具体的业务指令（如“开始模拟”、“保存数据”）。
+        \item \textbf{流程控制}：位于 \texttt{main.cpp} 的主循环中，维护整个应用程序的状态机（\texttt{AppState}），决定当前应该显示哪个页面，以及何时进行页面跳转。
     \end{itemize}
 \end{enumerate}
 
@@ -272,15 +286,22 @@
 
 \section{SIR 模型数学原理与实现}
 
-系统基于经典的SIR隔室模型。该模型假设总人口 $N$ 是不变的，且人群分为三类：
+系统基于经典的SIR（Susceptible-Infected-Removed）隔室模型。该模型由Kermack和McKendrick于1927年提出，是传染病动力学中最基础且应用最广泛的模型之一。模型建立在以下基本假设之上：
+\begin{enumerate}
+    \item \textbf{人口恒定}：假设在研究期间，总人口 $N$ 保持不变，不考虑出生率和自然死亡率。即 $N = S(t) + I(t) + R(t)$ 对任意时间 $t$ 恒成立。
+    \item \textbf{均匀混合}：假设人群是均匀混合的（Homogeneous Mixing），即任何一个个体与群体中其他个体的接触概率是相等的。
+    \item \textbf{终身免疫}：假设康复者（Removed）获得终身免疫力，不会再次变为易感者。
+\end{enumerate}
+
+人群被划分为三个互斥的仓室（Compartment）：
 \begin{itemize}
-    \item \textbf{S (Susceptible)}: 易感者，未被感染但缺乏免疫力的人群。
-    \item \textbf{I (Infected)}: 感染者，已确诊且具有传染能力的人群。
-    \item \textbf{R (Removed)}: 移出者，通过治愈获得免疫或因病死亡的人群。
+    \item \textbf{S (Susceptible, 易感者)}：指未被感染但缺乏免疫力的人群。在疾病传播初期，绝大多数人口属于此类。
+    \item \textbf{I (Infected, 感染者)}：指已被感染并具有传染能力的人群。这部分人群是病毒传播的源头。
+    \item \textbf{R (Removed, 移出者)}：指退出传染过程的人群，包括因病治愈获得免疫力的人，或因病死亡的人。
 \end{itemize}
 
 \subsection{微分方程模型}
-系统的核心动力学由以下一组常微分方程（ODEs）描述：
+系统的核心动力学由以下一组非线性常微分方程（Ordinary Differential Equations, ODEs）描述。这些方程描述了三个仓室之间人数随时间的变化率：
 
 \begin{equation}
 \frac{dS}{dt} = - \frac{\beta S I}{N}
@@ -292,16 +313,25 @@
 \frac{dR}{dt} = \gamma I
 \end{equation}
 
-其中：
+\textbf{方程物理意义解析}：
 \begin{itemize}
-    \item $\beta$ (Beta)：有效接触率，代表病毒的传染能力。
-    \item $\gamma$ (Gamma)：恢复率，代表医疗治愈能力，通常 $\gamma \approx 1/D$，其中$D$是平均感染周期。
+    \item \textbf{方程 (4.1)}：表示易感者数量的变化率。$\frac{S}{N}$ 是易感者在总人口中的比例，$\beta I$ 是一个感染者单位时间内有效接触的人数。因此，$\frac{\beta S I}{N}$ 代表单位时间内新被感染的人数。由于易感者不仅减少，所以符号为负。
+    \item \textbf{方程 (4.2)}：表示感染者数量的变化率。它由两部分组成：第一项 $\frac{\beta S I}{N}$ 是从易感者转化的新增感染者；第二项 $- \gamma I$ 是因治愈或死亡而离开感染状态的人数。
+    \item \textbf{方程 (4.3)}：表示移出者数量的变化率。即单位时间内有 $\gamma I$ 的人从感染者转变为移出者。
+\end{itemize}
+
+其中模型参数定义如下：
+\begin{itemize}
+    \item $\beta$ (Beta)：\textbf{有效接触率}，代表病毒的传染能力。它反映了社会互动的频率和病毒本身的传播性。
+    \item $\gamma$ (Gamma)：\textbf{恢复率}，代表医疗治愈能力。它是平均感染周期 $D$ 的倒数，即 $\gamma \approx 1/D$。例如，如果平均病程为10天，则 $\gamma = 0.1$。
 \end{itemize}
 
 \subsection{数值解算法 (欧拉法)}
-由于计算机无法直接处理连续的微分方程，我们需要对其进行离散化。本项目采用显式欧拉法（Forward Euler Method），设定时间步长 $\Delta t = 1$（天）。
+由于 SIR 模型是非线性微分方程组，除了极少数特殊情况外，很难求得其解析解（Analytical Solution）。因此，在计算机仿真中，我们通常采用数值方法求取其近似解。本项目出于计算效率和实现复杂度的平衡，采用了\textbf{显式欧拉法（Forward Euler Method）}。
 
-离散化后的递推公式如下，用于代码中的 \texttt{run\_single\_step} 函数：
+欧拉法的基本思想是将连续的时间 $t$ 离散化为一系列时间点 $t_0, t_1, ..., t_n$，其中 $t_{n+1} = t_n + \Delta t$。在足够小的时间步长 $\Delta t$ 内，假设函数的变化率是恒定的，从而用差分代替微分。
+
+设定时间步长 $\Delta t = 1$（单位：天），则导数 $\frac{dX}{dt}$ 近似为 $\frac{X_{t+1} - X_t}{\Delta t}$。代入原方程组，可得如下递推公式，这正是代码中 \texttt{run\_single\_step} 函数的核心逻辑：
 
 \begin{align}
 S_{t+1} &= S_t - (\frac{\beta S_t I_t}{N}) \\
@@ -379,6 +409,19 @@ double Region::calculateAverageBeta() const {
 \textbf{故障现象}：界面上的所有中文（如“武汉”、“确诊”）都显示为 `?` 或方框。
 \textbf{解决方案}：ImGui 默认只加载 ASCII 字符集。需要在初始化阶段加载包含中文字形的字体文件（如 \texttt{SimHei.ttf} 或 \texttt{DroidSansFallback.ttf}），并设置 \texttt{ImGuiIO} 的 \texttt{GetGlyphRangesChineseFull}。
 
+\subsection{问题四：内存泄漏与资源管理}
+\textbf{故障现象}：程序运行一段时间后，任务管理器显示内存占用持续飙升，最终导致程序崩溃（Crash）。
+\textbf{原因分析}：
+\begin{enumerate}
+    \item 在 C++ 中手动使用 \texttt{new} 分配了 `Region` 对象，但在删除地区时忘记调用 \texttt{delete}。
+    \item ImGui 的纹理资源在每一帧被重复加载，但没有释放。
+\end{enumerate}
+\textbf{解决方案}：
+\begin{enumerate}
+    \item 全面采用现代 C++ 的智能指针（Smart Pointers）。将 `std::vector<Region*>` 改为 `std::vector<std::unique\_ptr<Region>>`，利用 RAII（资源获取即初始化）机制，确保对象在离开作用域时自动释放内存。
+    \item 将纹理加载逻辑移至 \texttt{OnStart} 初始化阶段，仅加载一次，避免在 \texttt{OnRender} 循环中进行 IO 操作。
+\end{enumerate}
+
 % ----------------------------------------------------------------------
 % Chapter 5: Test Results
 % ----------------------------------------------------------------------
@@ -430,6 +473,15 @@ TC05 & 历史回放 & 拖动历史进度条 & 数据表格实时更新为当天�
     \label{fig:prediction}
 \end{figure}
 
+\subsection{历史数据修正}
+为了应对真实世界中数据可能出现的录入错误或滞后修正，系统提供了历史数据编辑功能。
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image07.png}
+    \caption{历史数据修正界面 - 表格化编辑与实时验证}
+    \label{fig:history_edit}
+\end{figure}
+
 \section{测试总结}
 经系统测试，本软件在 Windows 10/11 环境下运行稳定，内存占用保持在 50MB 以内。所有的核心功能（CRUD、模拟、绘图）均符合设计预期，能够正确处理各类边界情况（如0人口、极大数值），具备了作为课程设计作品的交付质量。
 
@@ -447,12 +499,31 @@ TC05 & 历史回放 & 拖动历史进度条 & 数据表格实时更新为当天�
 \end{itemize}
 
 \section{不足与改进}
-虽然系统已具备基本功能，但受限于时间和开发经验，仍存在以下局限性：
-\begin{enumerate}
-    \item \textbf{模型的局限性}：当前使用的 SIR 模型较为理想化，假设人群是均匀混合的，忽略了空间距离、年龄结构和潜伏期（Incubation Period）。对于新冠这样有较长潜伏期的病毒，引入 SEIR（Susceptible-Exposed-Infected-Removed）模型会更准确。
-    \item \textbf{数据存储}：目前所有数据均存储在内存中（RAM），程序关闭后即丢失，仅能通过简单的 CSV 导入导出。未来应引入轻量级数据库（如 SQLite）实现数据的持久化管理。
-    \item \textbf{网络传播模块}：目前的模拟是基于单个地区的封闭系统。未来可增加“城市间交通流”模型，模拟病毒通过高铁、航班在不同城市间的扩散过程。
-\end{enumerate}
+虽然系统已具备基本功能，但受限于时间和开发经验，仍存在以下局限性，这也是未来的主要改进方向：
+
+\subsection{1. 模型精度的提升 (SEIR 模型)}
+当前使用的 SIR 模型较为理想化。对于新冠（COVID-19）这样具有显著潜伏期的病毒，SIR 模型无法准确反映"已感染但未发病"（Exposed）人群的传播风险。
+\textbf{改进方案}：引入 \textbf{SEIR} 模型，增加一个 \textbf{E (Exposed)} 仓室。
+\begin{equation}
+\frac{dE}{dt} = \frac{\beta S I}{N} - \sigma E
+\end{equation}
+其中 $\sigma$ 是潜伏期倒数。这将使预测曲线的峰值出现得比 SIR 模型更晚，但更符合流行病学规律。
+
+\subsection{2. 数据持久化 (Database Integration)}
+目前系统采用内存数据库（In-Memory），通过 CSV 文件进行冷备份。但在高并发或大数据量下，这种方式效率低下且不安全。
+\textbf{改进方案}：引入轻量级嵌入式数据库 \textbf{SQLite}。
+\begin{itemize}
+    \item 设计关系型数据表：\texttt{Table\_Regions}, \texttt{Table\_DailyData}。
+    \item 利用 SQL 语句实现复杂的查询分析（如“查询确诊增长最快的前5个城市”）。
+\end{itemize}
+
+\subsection{3. 复杂网络传播模型 (Network Model)}
+目前的模拟是将每个地区视为孤岛。然而现实世界中，城市之间存在复杂的人员流动网络。
+\textbf{改进方案}：构建 \textbf{元胞自动机 (Cellular Automata)} 或 \textbf{小世界网络 (Small-world Network)} 模型。
+\begin{itemize}
+    \item 定义地区间的邻接矩阵 $A_{ij}$，表示城市 $i$ 到城市 $j$ 的交通流量。
+    \item 修改微分方程，增加输入项 $\sum A_{ji} \frac{I_j}{N_j} $，模拟输入性病例对本地疫情的影响。
+\end{itemize}
 
 % ----------------------------------------------------------------------
 % Appendix
